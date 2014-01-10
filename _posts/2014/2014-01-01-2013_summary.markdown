@@ -1,0 +1,7 @@
+---
+layout: page
+title: 我的2013年总结
+category: 总结
+tags: 技术
+---
+{% include JB/setup %}
