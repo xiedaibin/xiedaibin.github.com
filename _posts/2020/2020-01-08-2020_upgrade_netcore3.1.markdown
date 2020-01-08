@@ -16,7 +16,8 @@ tags: 技术
     +    <TargetFramework>netcoreapp3.1</TargetFramework>
     </PropertyGroup>
 
-    </Project>
+    </Project>   
+    
 具体操作，在VS中将所有\<TargetFramework>netcoreapp2.1\</TargetFramework>整个解决方案替换成\<TargetFramework>netcoreapp3.1\</TargetFramework>  
 ## 引用组件得升级
 　　
