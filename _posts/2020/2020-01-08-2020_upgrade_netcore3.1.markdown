@@ -121,7 +121,7 @@ tags: 技术
 ## 引用组件得升级
 
 3.1 Newtonsoft.Json升级。  
-需要在项目文件中添加程序包 \<PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.0" \/>    
+需要在项目文件中添加程序包 \<PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.0" />    
 原代码：
 
     services
@@ -139,11 +139,11 @@ tags: 技术
         });
 
 3.2 版本控制Microsoft.AspNetCore.Mvc.Versioning升级   
-需要在项目文件中添加程序包\<PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="4.1.1" \/>    
+需要在项目文件中添加程序包\<PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="4.1.1" />    
 
 3.3 swagger 升级。具体请查看[asp.net core 3.0 中使用 swagger](https://www.cnblogs.com/weihanli/p/ues-swagger-in-aspnetcore3_0.html){:target="_blank"}       
-程序包升级到 \<PackageReference Include="Swashbuckle.AspNetCore" Version="5.00-rc4" \/>    
-添加程序包  \<PackageReference Include="Microsoft.OpenApi" Version="1.1.4" \/> 该包将一些属性规范化    
+程序包升级到 \<PackageReference Include="Swashbuckle.AspNetCore" Version="5.00-rc4" />    
+添加程序包  \<PackageReference Include="Microsoft.OpenApi" Version="1.1.4" /> 该包将一些属性规范化    
 原代码    
 
     //获取版本信息
