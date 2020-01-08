@@ -20,7 +20,7 @@ tags: 技术
 
 具体操作，在VS中将所有\<TargetFramework>netcoreapp2.1\</TargetFramework>整个解决方案替换成\<TargetFramework>netcoreapp3.1\</TargetFramework>  
 &#160; &#160; &#160; &#160; 2.更新以前的 Startup.Configure 代码  
-2.1 app.UseMvc 方法改变。
+&#160; &#160; &#160; &#160; &#160; &#160; 2.1 app.UseMvc 方法改变。
 下面的代码是典型的ASP.NET Core 2.2 应用程序 Startup.Configure 的示例：
 
     public void Configure(IApplicationBuilder app)
@@ -64,9 +64,9 @@ tags: 技术
         });
     }
 
-对于大多数应用，对 UseAuthentication、UseAuthorization和 UseCors 的调用必须出现在对 UseRouting 的调用之间，然后 UseEndpoints 才有效。注：这里UseCors，UseAuthentication 都要放在UseRouting 的调用之间，然后 UseEndpoints中间。    
+对于大多数应用，对 UseAuthentication、UseAuthorization和 UseCors 的调用必须出现在对 UseRouting 的调用之间，然后 UseEndpoints 才有效。注：这里UseCors，UseAuthentication 都要放在UseRouting,UseEndpoints中间。    
 
-2.2 跨域配置AddCors改变。 
+&#160; &#160; &#160; &#160; &#160; &#160;2.2 跨域配置AddCors改变。 
    跨域这里有两个改法一个是去掉.AllowCredentials()，在跨域不传递cookie得情况，一种是通过WithOrigins指定具体得目标网站地址。最后不要忘了在Config中app.UseCors()   
 原代码：
 
@@ -113,7 +113,7 @@ tags: 技术
         endpoints.MapControllers().RequireCors("AllowAllMethods");
     });
 
-2.4 IHostingEnvironment 已被弃用 使用IWebHostEnvironment 替换。
+&#160; &#160; &#160; &#160; &#160; &#160;2.3 IHostingEnvironment 已被弃用 使用IWebHostEnvironment 替换。
 需要添加引用 using Microsoft.Extensions.Hosting;
 
 
@@ -141,7 +141,7 @@ tags: 技术
 3.2 版本控制Microsoft.AspNetCore.Mvc.Versioning升级   
 需要在项目文件中添加程序包\<PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="4.1.1" \/>    
 
-3.3 swagger 升级。具体请查看[参考文章](#jump) asp.net core 3.0 中使用 swagger   
+3.3 swagger 升级。具体请查看[asp.net core 3.0 中使用 swagger](https://www.cnblogs.com/weihanli/p/ues-swagger-in-aspnetcore3_0.html){:target="_blank"}       
 程序包升级到 \<PackageReference Include="Swashbuckle.AspNetCore" Version="5.00-rc4" \/>    
 添加程序包  \<PackageReference Include="Microsoft.OpenApi" Version="1.1.4" \/> 该包将一些属性规范化    
 原代码    
