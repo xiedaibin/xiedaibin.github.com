@@ -105,8 +105,12 @@ tags: 技术
             .SetPreflightMaxAge(TimeSpan.FromSeconds(8 * 60 * 60))));
 
 ***
+    app.UseRouting();
+
     //通过终结点路由，CORS 中间件必须配置为在对 UseRouting 和 UseEndpoints的调用之间执行。 配置不正确将导致中间件停止正常运行。
     app.UseCors();
+    
+    app.UseAuthentication();
 
     app.UseEndpoints(endpoints =>
     {
