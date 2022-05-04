@@ -16,23 +16,25 @@ docker：20.10.14
 192.168.1.162 k8s-master-1    
 vi /etc/hostname 将值更改为 k8s-master-1    
 192.168.1.161 k8s-node-1   
-vi /etc/hostname 将值更改为 k8s-master-1     
-## <span id="jump">服务器环境配置</span>
+vi /etc/hostname 将值更改为 k8s-master-1         
+
+## <span id="jump">服务器环境配置</span>  
+
 1.禁用selinux  
-    
-    [root@k8s-master-1 ~]# setenforce 0          #临时关闭
-    [root@k8s-master-1 ~]# vi /etc/selinux/config   #永久，将config 中SELINUX设置为disabled
+
+    [root@k8s-master-1 ~]# setenforce 0   #临时关闭
+    [root@k8s-master-1 ~]# vi /etc/selinux/config   #永久，将config 中SELINUX设置为disabled     
 
 2.禁用firewalld  
     查看防火墙状态： systemctl status firewalld.service     
     关闭防火墙命令： systemctl stop firewalld.service        
-    禁用防火墙命令： systemctl disable firewalld.service  
+    禁用防火墙命令： systemctl disable firewalld.service      
 3.关闭swap交换区
     
     [root@k8s-master-1 ~]# swapoff -a #临时关闭
     [root@k8s-master-1 ~]# vi  /etc/fstab #永久，编辑/etc/fstab，注释关于swap那行   
 
-![iamge](/images/article/20220429-144333.jpg)
+![iamge](/images/article/20220429-144333.jpg)   
 4.修改iptable规则，打开内置的桥功能
 
     echo "1" >/proc/sys/net/bridge/bridge-nf-call-iptables
@@ -85,7 +87,7 @@ vi /etc/hostname 将值更改为 k8s-master-1
     yum install -y --nogpgcheck kubelet kubeadm kubectl
     systemctl enable kubelet && systemctl start kubelet
 
-**ps**: 由于官网未开放同步方式, 可能会有索引gpg检查失败的情况, 这时请用 yum install -y --nogpgcheck kubelet kubeadm kubectl 安装
+**ps**: 由于官网未开放同步方式, 可能会有索引gpg检查失败的情况, 这时请用 yum install -y --nogpgcheck kubelet kubeadm kubectl 安装    
 2.初始化master
 
     kubeadm init --image-repository registry.aliyuncs.com/google_containers --kubernetes-version v1.23.6 --pod-network-cidr=10.244.0.0/16
@@ -114,7 +116,7 @@ vi /etc/hostname 将值更改为 k8s-master-1
 
 ## 配置node，加入集群
 1.node环境配置
-    同master一样需要配置环境并安装docker。[环境配置](#jump)
+    同master一样需要配置环境并安装docker。([环境配置](#jump))   
 2.执行下面命令安装k8s组件
 
     cat <<EOF > /etc/yum.repos.d/kubernetes.repo
