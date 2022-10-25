@@ -15,23 +15,26 @@ docker：20.10.14
 更改服务器名称(便于查看)  
 192.168.1.162 k8s-master-1    
 vi /etc/hostname 将值更改为 k8s-master-1    
-192.168.1.161 k8s-node-1    vi /etc/hostname 将值更改为 k8s-master-1 
-## <span id="jump">服务器环境配置</span>
+192.168.1.161 k8s-node-1   
+vi /etc/hostname 将值更改为 k8s-master-1         
+
+## <span id="jump">服务器环境配置</span>  
+
 1.禁用selinux  
-    
-    [root@k8s-master-1 ~]# setenforce 0          #临时关闭
-    [root@k8s-master-1 ~]# vi /etc/selinux/config   #永久，将config 中SELINUX设置为disabled
+
+    [root@k8s-master-1 ~]# setenforce 0   #临时关闭
+    [root@k8s-master-1 ~]# vi /etc/selinux/config   #永久，将config 中SELINUX设置为disabled     
 
 2.禁用firewalld  
     查看防火墙状态： systemctl status firewalld.service     
     关闭防火墙命令： systemctl stop firewalld.service        
-    禁用防火墙命令： systemctl disable firewalld.service  
+    禁用防火墙命令： systemctl disable firewalld.service      
 3.关闭swap交换区
     
     [root@k8s-master-1 ~]# swapoff -a #临时关闭
     [root@k8s-master-1 ~]# vi  /etc/fstab #永久，编辑/etc/fstab，注释关于swap那行   
 
-![iamge](../../images/article/20220429-144333.jpg)
+![iamge](/images/article/20220429-144333.jpg)   
 4.修改iptable规则，打开内置的桥功能
 
     echo "1" >/proc/sys/net/bridge/bridge-nf-call-iptables
@@ -40,7 +43,7 @@ vi /etc/hostname 将值更改为 k8s-master-1
 
     [root@k8s-master-1 ~]# vi /etc/hosts
 
-![image](../../images/article/20220429-144333.jpg)   
+![image](/images/article/20220429-144333.jpg)   
 6.docker环境搭建与配置
 
     curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
@@ -84,7 +87,7 @@ vi /etc/hostname 将值更改为 k8s-master-1
     yum install -y --nogpgcheck kubelet kubeadm kubectl
     systemctl enable kubelet && systemctl start kubelet
 
-**ps**: 由于官网未开放同步方式, 可能会有索引gpg检查失败的情况, 这时请用 yum install -y --nogpgcheck kubelet kubeadm kubectl 安装
+**ps**: 由于官网未开放同步方式, 可能会有索引gpg检查失败的情况, 这时请用 yum install -y --nogpgcheck kubelet kubeadm kubectl 安装    
 2.初始化master
 
     kubeadm init --image-repository registry.aliyuncs.com/google_containers --kubernetes-version v1.23.6 --pod-network-cidr=10.244.0.0/16
@@ -93,7 +96,7 @@ vi /etc/hostname 将值更改为 k8s-master-1
  初始化错误，解决问题之后，可以通过kubeadm reset 重置，再安装。
 
 初始化命令成功结束后会出现下图内容：
-![iamge](../../images/article/20220429-144742.png)
+![iamge](/images/article/20220429-144742.png)
 
 
 
@@ -108,12 +111,12 @@ vi /etc/hostname 将值更改为 k8s-master-1
     sudo vim /etc/hosts
     199.232.28.133 raw.githubusercontent.com
 
-![iamge](../../images/article/20220429-144743.png)
-![iamge](../../images/article/20220429-144744.png)
+![iamge](/images/article/20220429-144743.png)
+![iamge](/images/article/20220429-144744.png)
 
 ## 配置node，加入集群
 1.node环境配置
-    同master一样需要配置环境并安装docker。[环境配置](#jump)
+    同master一样需要配置环境并安装docker。([环境配置](#jump))   
 2.执行下面命令安装k8s组件
 
     cat <<EOF > /etc/yum.repos.d/kubernetes.repo
@@ -134,14 +137,14 @@ vi /etc/hostname 将值更改为 k8s-master-1
     kubeadm join 192.168.1.162:6443 --token ****** \
     --discovery-token-ca-cert-hash sha256:eb138b1edc2436d8de9ee844392059caecdadbc6e9c2bf6729f8ee2e6151c953
 
-![image](../../images/article/20220429-161912.jpg)
+![image](/images/article/20220429-161912.jpg)
 
 **ps**: 加入错误，解决问题之后，可以通过kubeadm reset 重置，再加入  
 4.在master执行命令查看集群状态
 
     [root@k8s-master-1 ~]# kubectl  get node
 
-![image](../../images/article/20220429-155018.jpg)
+![image](/images/article/20220429-155018.jpg)
 
 ## 参考文章
 [002.使用kubeadm安装kubernetes 1.17.0](https://www.cnblogs.com/zyxnhr/p/12181721.html){:target="_blank"}     
