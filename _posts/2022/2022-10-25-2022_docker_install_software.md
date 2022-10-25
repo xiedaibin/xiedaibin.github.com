@@ -37,7 +37,7 @@ docker run \
 ~~~
 
 ## nuget-server
-baget.env    
+baget.env   
 ~~~
 ApiKey=c94c2be6-d754-11ec-8f72-00163e17680c
 Storage__Type=FileSystem
@@ -46,6 +46,7 @@ Database__Type=Sqlite
 Database__ConnectionString=Data Source=/var/baget/baget.db
 Search__Type=Database
 ~~~
+
 ~~~ PowerShell
 docker run -itd --name nuget-server --restart=always -p 7002:80 --env-file baget.env -v "$(pwd)/baget-data:/var/baget" loicsharma/baget:latest
 ~~~
