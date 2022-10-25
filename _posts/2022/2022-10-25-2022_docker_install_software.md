@@ -38,7 +38,7 @@ docker run \
 
 ## nuget-server
 baget.env    
-~~~ Plain Text
+~~~
 ApiKey=c94c2be6-d754-11ec-8f72-00163e17680c
 Storage__Type=FileSystem
 Storage__Path=/var/baget/packages
