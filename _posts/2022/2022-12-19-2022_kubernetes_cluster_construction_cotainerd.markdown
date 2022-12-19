@@ -6,15 +6,15 @@ tags: 技术
 ---
 {% include JB/setup %}
 ## 环境
-系统：Centos7
-kubernetes：v1.26.0
-containerd：1.6.13
+系统：Centos7   
+kubernetes：v1.26.0     
+containerd：1.6.13      
 ## 服务器准备   
-1. 192.168.1.162 mater  
-2. 192.168.1.161 node   
-更改服务器名称(便于查看)  
+1. 192.168.1.162 mater      
+2. 192.168.1.161 node       
+更改服务器名称(便于查看)    
 192.168.1.162 k8s-master-1    
-vi /etc/hostname 将值更改为 k8s-master-1    
+vi /etc/hostname 将值更改为 k8s-master-1        
 192.168.1.161 k8s-node-1   
 vi /etc/hostname 将值更改为 k8s-master-1         
 
@@ -28,6 +28,7 @@ vi /etc/hostname 将值更改为 k8s-master-1
     查看防火墙状态： systemctl status firewalld.service     
     关闭防火墙命令： systemctl stop firewalld.service        
     禁用防火墙命令： systemctl disable firewalld.service      
+
 ### 3.关闭swap交换区
     
     [root@k8s-master-1 ~]# swapoff -a && sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
@@ -99,7 +100,8 @@ vi /etc/hostname 将值更改为 k8s-master-1
 
     # 重启containerd
     $ systemctl daemon-reload
-    $ systemctl restart containerd
+    $ systemctl restart containerd      
+
 #### 6.3 CRI 客户端 crictl
 
     # https://github.com/kubernetes-sigs/cri-tools/releases/ 选择版本
@@ -203,7 +205,8 @@ vi /etc/hostname 将值更改为 k8s-master-1
 ## 配置node，加入集群
 
 ### 1.node环境配置
-    同master一样需要配置环境并安装cotnainerd。([环境配置](#jump))   
+同master一样需要配置环境并安装cotnainerd。([环境配置](#jump))   
+
 ### 2.执行下面命令安装k8s组件
 
     cat <<EOF > /etc/yum.repos.d/kubernetes.repo
