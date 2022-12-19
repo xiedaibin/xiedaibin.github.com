@@ -34,11 +34,14 @@ vi /etc/hostname 将值更改为 k8s-master-1
     [root@k8s-master-1 ~]# swapoff -a #临时关闭
     [root@k8s-master-1 ~]# vi  /etc/fstab #永久，编辑/etc/fstab，注释关于swap那行   
 
-![iamge](/images/article/20220429-144333.jpg)   
+![iamge](/images/article/20220429-144741.jpg)   
 4.修改iptable规则，打开内置的桥功能
 
     echo "1" >/proc/sys/net/bridge/bridge-nf-call-iptables
     
+注：若出现不存在错误: -bash: /proc/sys/net/bridge/bridge-nf-call-iptables: 没有那个文件或目录    
+执行  modprobe br_netfilter 后在执行该语句      
+
 5.在master配置hosts解析各主机
 
     [root@k8s-master-1 ~]# vi /etc/hosts
