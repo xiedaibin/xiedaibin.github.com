@@ -2,7 +2,7 @@
 layout: page
 title: C# 中Task.WhenAll(storesTask,storeHouseTask) 同时我想获得到返回结果
 category: 技术
-tags: 技术
+tags: ChatGPT问答
 ---
 {% include JB/setup %}
 
