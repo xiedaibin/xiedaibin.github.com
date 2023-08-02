@@ -1,12 +1,11 @@
 ---
 layout: page
-title: C# 中Task.WhenAll(storesTask,storeHouseTask) 同时我想获得到返回结果
+title: chmod +x 和-x 详解
 category: 技术
 tags: ChatGPT问答 linux
 ---
 {% include JB/setup %}
 
-## chmod +x 和-x 详解
 
 `chmod`命令用于在Linux和Unix系统上更改文件和目录的权限。权限控制了对文件和目录的访问，其中包括读取（r）、写入（w）和执行（x）权限。数字方式和符号方式都可以用来设置权限。
 
