@@ -2,7 +2,7 @@
 layout: page
 title: 和ChatGPT battle mysql语句优化
 category: 技术
-tags: ChatGPT问答 linux
+tags: ChatGPT问答 mysql
 ---
 {% include JB/setup %}
 
