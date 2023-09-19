@@ -2,7 +2,7 @@
 layout: page
 title: Kubernetes中使用dotnet-dump工具获取日志
 category: 技术
-tags: `.net core`
+tags: C#
 ---
 {% include JB/setup %}
 
