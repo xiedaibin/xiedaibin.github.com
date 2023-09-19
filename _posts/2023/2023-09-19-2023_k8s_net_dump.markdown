@@ -1,0 +1,67 @@
+---
+layout: page
+title: Kubernetes中使用dotnet-dump工具获取日志
+category: 技术
+tags: `.net core`
+---
+{% include JB/setup %}
+
+## 概述
+  这是以前写在笔记本里的关于如何在k8s中得到.net core 程序的dump 日志，突然看到一个pod内存暂用过高，想拉下来一个dump看看，但忘记了命令。
+  然后就在网上找也没找到合适的文章，在笔记里找也找了半天才找到，还是整理出来这样更方便分享以及帮助需要的朋友。再加上现在有chapgt可以让它
+  帮我整理并输出成markdown形式，也不用花太多时间。以下就是chatgpt 帮我整理的笔记。
+
+### 要在Kubernetes中使用dotnet-dump工具获取日志，您需要执行以下步骤：
+
+1. 首先，在Kubernetes中查找正在运行的容器的名称或ID：
+   ```shell
+   kubectl get pods
+   kubectl describe pod <pod-name>
+   ```
+
+2. 进入容器：
+   ```shell
+   kubectl exec -it <pod-name> -c <container-name> -- /bin/bash
+   ```
+
+3. 运行dotnet-dump工具，将输出保存到文件中：
+   ```shell
+   dotnet-dump collect -p <process-id> -o /tmp/dump
+   ```
+
+   请注意，这里的 `<process-id>` 是您要获取日志的进程的ID。如果您不知道进程的ID，可以使用 `ps` 命令来查找。此外，确保dotnet-dump工具已在容器中安装并可用。
+
+4. 将输出文件从容器复制到本地计算机：
+   ```shell
+   kubectl cp <pod-name>:/tmp/dump /path/to/local/folder
+   ```
+
+5. 最后，将输出文件加载到dotnet-dump工具中进行分析：
+   ```shell
+   dotnet-dump analyze /path/to/local/folder/dump
+   ```
+
+如果需要在容器中安装dotnet-dump工具，您可以使用以下命令：
+
+```shell
+kubectl exec -it YOUR_POD_NAME -- /bin/sh
+
+apt-get update
+apt-get install wget
+wget -O dotnet-dump https://aka.ms/dotnet-dump/linux-x64
+chmod 777 ./dotnet-dump
+
+# 使用以下命令来获取进程ID
+./dotnet-dump ps
+
+# 使用以下命令来收集日志
+./dotnet-dump collect -p YOUR_PROCESS_ID
+
+# 压缩日志文件
+gzip DUMP_NAME
+
+# 将压缩的日志文件复制到本地计算机
+kubectl cp YOUR_POD_NAME:/app/DUMP_NAME.gz ./dotnetdump/mydump.gz
+```
+
+请注意，上述命令中的 `<process-id>` 和其他占位符应替换为实际的值，以便执行操作。希望这有助于您在Kubernetes中使用dotnet-dump工具获取日志。
