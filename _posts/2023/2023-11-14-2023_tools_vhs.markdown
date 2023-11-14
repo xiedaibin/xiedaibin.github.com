@@ -1,0 +1,80 @@
+---
+layout: page
+title: VHS
+category: 工具
+tags: 
+---
+{% include JB/setup %}
+
+
+#### VHS（Visual HyperScript）是一个用于创建终端录制脚本的工具，它可以生成可执行的命令序列，以便在终端中模拟用户的操作。通过使用VHS，用户可以记录和重放终端会话，包括命令输入、按键操作、以及显示效果等。VHS允许用户设置各种终端属性，如字体大小、颜色主题、帧速率等，以便更好地控制录制的终端会话的外观和行为。录制的终端脚本可以导出为GIF、MP4、或WebM等格式，方便用户与他人分享和展示特定终端操作过程。这使得VHS成为一个有用的工具，特别适用于演示、教学、或记录终端操作流程的场景。
+
+plaintext
+
+```plaintext
+# VHS 文档
+#
+# 输出:
+#   Output <路径>.gif               在给定的 <路径> 创建一个 GIF 输出
+#   Output <路径>.mp4               在给定的 <路径> 创建一个 MP4 输出
+#   Output <路径>.webm              在给定的 <路径> 创建一个 WebM 输出
+#
+# 要求:
+#   Require <字符串>                确保程序在 $PATH 上以继续
+#
+# 设置:
+#   Set FontSize <数字>             设置终端的字体大小
+#   Set FontFamily <字符串>         设置终端的字体系列
+#   Set Height <数字>               设置终端的高度
+#   Set Width <数字>                设置终端的宽度
+#   Set LetterSpacing <浮点数>       设置字体的字距
+#   Set LineHeight <浮点数>          设置字体的行高
+#   Set LoopOffset <浮点数>%         设置 GIF 循环的起始帧偏移
+#   Set Theme <json|字符串>         设置终端的主题
+#   Set Padding <数字>              设置终端的内边距
+#   Set Framerate <数字>            设置录制的帧速率
+#   Set PlaybackSpeed <浮点数>      设置录制的播放速度
+#   Set MarginFill <文件|#000000>   设置将填充边距的文件或颜色。
+#   Set Margin <数字>               设置边距的大小。如果未设置 MarginFill，则无效。
+#   Set BorderRadius <数字>         设置终端的边框半径，以像素为单位。
+#   Set WindowBar <字符串>          设置窗口栏类型。 (其中之一: Rings, RingsRight, Colorful, ColorfulRight)
+#   Set WindowBarSize <数字>        设置窗口栏大小，以像素为单位。默认值为 40。
+#   Set TypingSpeed <时间>          设置终端的打字速度。默认值为 50ms。
+#
+# 休眠:
+#   Sleep <时间>                    休眠一定的时间，单位为秒
+#
+# 输入:
+#   Type[@<时间>] "<字符>"          在终端中输入 <字符>，每个字符之间有 <时间> 的延迟
+#
+# 按键:
+#   Backspace[@<时间>] [数字]       按下退格键
+#   Down[@<时间>] [数字]            按下向下键
+#   Enter[@<时间>] [数字]           按下回车键
+#   Space[@<时间>] [数字]           按下空格键
+#   Tab[@<时间>] [数字]             按下制表键
+#   Left[@<时间>] [数字]            按下左箭头键
+#   Right[@<时间>] [数字]           按下右箭头键
+#   Up[@<时间>] [数字]              按下上箭头键
+#   Down[@<时间>] [数字]            按下下箭头键
+#   PageUp[@<时间>] [数字]          按下 Page Up 键
+#   PageDown[@<时间>] [数字]        按下 Page Down 键
+#   Ctrl+<键>                      按下控制键 + <键> (例如 Ctrl+C)
+#
+# 显示:
+#   Hide                            隐藏后续的命令输出
+#   Show                            在输出中显示后续的命令
+
+Output examples/demo.gif
+
+Require echo
+
+Set Shell "bash"
+Set FontSize 32
+Set Width 1200
+Set Height 600
+
+Type "echo '欢迎使用 VHS!'" Sleep 500ms  Enter
+
+Sleep 5s
+```
