@@ -7,8 +7,6 @@ tags: net core
 {% include JB/setup %}
 
 
-**Options 模式的原理、好处和实现**
-
 **原理**
 
 Options 模式是 ASP.NET Core 中用于管理应用程序配置信息的机制。其核心原理基于依赖注入和配置系统的绑定机制。
