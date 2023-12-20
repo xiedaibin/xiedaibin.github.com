@@ -1,0 +1,123 @@
+---
+layout: page
+title: 公司项目从Abp5.0.1升级到Abp7.4.2
+category: 技术
+tags: abp
+---
+{% include JB/setup %}
+
+### 背景
+Abp5.0.1使用的基础框架是.net 6, 现在.net 8正式版已经发布。 abp .net 8版本也即将发布，避免直接从.net 6跨度到.net 8 项目中变更的因数过多难以升级。再加上以前在其他项目中顺利升级到abp 7版本。故在时间允许的情况下，将Abp5.0.1升级到abp7.4.2版本(该版本使用的是.net 7),待abp .net 8版本稳定可靠后在升级到.net 8版本。
+#### 好处与挑战
+**好处**：
+
+1.享受升级框架所带来的优势，包括降低内存消耗和性能提升，以及享受.NET版本升级所带来的红利。
+
+2.获取新的语言特性和框架升级后的新特性支持已经性能提升。
+
+
+3.保持团队技术的领先地位，避免陷入技术滞后，确保始终保持技术的前瞻性。
+
+**挑战**：
+
+1.需要对框架升级变更有充分的了解，并对框架升级之后代来的兼容性问题进行及时调整。
+
+2.由于是基础框架的升级，需要对所有功能进行通测，以保证升级之后系统的稳定。
+
+### 升级过程
+#### 1.abp基础框架升级。
+ABP CLI 提供了一个方便的命令，可以使用单个命令更新解决方案中所有与 ABP 相关的 NuGet 和 NPM 包：
+
+    ```shell
+    abp update
+    ```
+
+指定版本升级
+
+    ```shell
+    abp update -v 7.4.2
+    ```
+
+升级整个指定解决方案
+
+    ```shell
+    abp update -sn cl.cws.sln
+    ```
+
+当前稳定版最新版本7.4.2 所以直接abp update 就可以。
+
+更多升级细节可参考 [升级 ABP 框架](https://docs.abp.io/zh-Hans/abp/latest/Upgrading)
+
+重大变更细节可参考 [ABP Version 7.0 Migration Guide](https://docs.abp.io/zh-Hans/abp/latest/Migration-Guides/Abp-7_0)
+
+#### 2.兼容性问题调整。
+##### 2.1.Json配置调整 abp 7.0 中AbpJsonOptions去除了UseHybridSerializer 的配置,abp 7之后需要使用NewtonsoftJson需要在MvcBuilder中配置。
+XXModuleHttpApiModule 中 注释掉options.UseHybridSerializer = false;
+
+    ```csharp
+    //使用NewtonsoftJson作为json解析库
+    PreConfigure<AbpJsonOptions>(options =>
+    {
+        //options.UseHybridSerializer = false;
+    });
+    ```
+
+在MvcBuilder中新增NewtonsoftJson 配置
+
+    ```csharp
+    //使用NewtonsoftJson作为json解析库
+    PreConfigure<IMvcBuilder>(mvcBuilder =>
+    {
+        //配置NewtonsoftJson
+        mvcBuilder.AddNewtonsoftJson(
+            options =>
+            {
+                //忽略循环引用
+                options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                options.SerializerSettings.ContractResolver = new ConverterContractResolver();
+            });
+    });
+    ```
+
+### 升级过后出现的问题以及解决办法
+#### 1.mapper 映射问题。
+某类型中某属性只有Get属性并且返回的是List，原行为是不会映射也不会抛错，新行为会抛出映射错误。
+
+**解决办法:**
+
+1.只有Get属性且返回引用类型的需要配置忽略。
+
+如：
+
+    ```markdown
+    public class WarehouseLogisticsesFeeBaseInfoDto : LogisticsesFeeBaseInfoDto
+    {
+       ~~public override List<TransportCharacteristics> TransportCharacteristicsList { get; }~~
+       public override List<TransportCharacteristics> TransportCharacteristicsList { get { return base.TransportCharacteristicsList; } }
+    }
+    ```
+
+ 配置忽略
+
+    ```csharp
+    public class WarehouseModuleApplicationAutoMapperProfile : Profile
+    {
+        public WarehouseModuleApplicationAutoMapperProfile()
+        {
+            CreateMap<LogisticsesFeeBaseInfoDto, WarehouseLogisticsesFeeBaseInfoDto>(MemberList.None)
+            .Ignore(p => p.TransportCharacteristicsList);
+        }
+    }
+    ```
+
+2.需要映射的字段 保留get;set;两个属性，保证能正常映射。
+
+#### 2.扩展字段 必填问题。
+Volo.Abp.Domain.Entities 中 聚合根对象有两个特殊属性 ConcurrencyStamp，ExtraProperties，原行为两个字段可以为null,新行为两个值都不能为null，为null时查询会抛出错误。
+该问题主要出现在自己写sql添加实体时，框架本身会赋值两个属性，基于框架的实体新增本身不会出现该问题。
+
+**解决办法：**
+
+修复手动写sql添加实体时对该ConcurrencyStamp，ExtraProperties的赋值。
+
+对已有ConcurrencyStamp，ExtraProperties 为null的数据进行修复。
