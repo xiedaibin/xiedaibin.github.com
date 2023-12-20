@@ -50,6 +50,8 @@ abp update -sn cl.cws.sln
 
 重大变更细节可参考 [ABP Version 7.0 Migration Guide](https://docs.abp.io/zh-Hans/abp/latest/Migration-Guides/Abp-7_0)
 
+更多版本变更 参考 [Migration Guides/Index | Documentation Center | ABP.IO](https://docs.abp.io/zh-Hans/abp/8.0/Migration-Guides/Index)
+
 #### 2.兼容性问题调整。
 ##### 2.1.Json配置调整 abp 7.0 中AbpJsonOptions去除了UseHybridSerializer 的配置,abp 7之后需要使用NewtonsoftJson需要在MvcBuilder中配置。
 XXModuleHttpApiModule 中 注释掉options.UseHybridSerializer = false;
