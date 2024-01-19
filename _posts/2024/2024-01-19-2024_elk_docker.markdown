@@ -1,0 +1,101 @@
+---
+layout: page
+title: ELK简单介绍以及docker安装ek服务端
+category: 技术
+tags: nacos
+---
+{% include JB/setup %}
+
+
+### ELK 是一个由三个开源软件组成的集合，用于实时日志数据的收集、搜索、分析和可视化。ELK 代表以下三个组件：
+
+#### Elasticsearch:
+
+Elasticsearch 是一个实时的分布式搜索和分析引擎。它被设计用于处理大规模的数据，并提供高度可扩展性和灵活性。Elasticsearch 使用倒排索引来实现快速的全文搜索，并支持复杂的查询和分析。
+
+#### Logstash:
+
+Logstash 是一个用于日志数据的收集、处理和传输的开源工具。它可以从各种来源（如日志文件、数据库、消息队列等）收集数据，并将其标准化后发送到目标存储（如 Elasticsearch）。Logstash 还支持数据的转换和丰富，以确保数据在传输到 Elasticsearch 前是结构化和可查询的。
+#### Kibana:
+
+Kibana 是一个用于可视化和分析 Elasticsearch 中存储的数据的开源平台。它提供了直观的用户界面，可以通过图表、图形和仪表板来展示数据。Kibana 还允许用户执行复杂的搜索和查询操作，并通过可视化方式呈现搜索结果。
+
+#### docker-compose.yml 脚本
+
+```bash
+
+version: '2.2'
+services:
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.1.0
+    container_name: kibana7
+    environment:
+      - I18N_LOCALE=zh-CN
+      - XPACK_GRAPH_ENABLED=true
+      - TIMELION_ENABLED=true
+      - XPACK_MONITORING_COLLECTION_ENABLED="true"
+    ports:
+      - "5601:5601"
+    networks:
+      - es7net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.1.0
+    container_name: es7_01
+    environment:
+      - cluster.name=xdb
+      - node.name=es7_01
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+      - discovery.seed_hosts=es7_01,es7_02
+      - cluster.initial_master_nodes=es7_01,es7_02
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es7data1:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - es7net
+
+  elasticsearch2:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.1.0
+    container_name: es7_02
+    environment:
+      - cluster.name=xdb
+      - node.name=es7_02
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+      - discovery.seed_hosts=es7_01,es7_02
+      - cluster.initial_master_nodes=es7_01,es7_02
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es7data2:/usr/share/elasticsearch/data
+    networks:
+      - es7net
+
+  cerebro:
+    image: lmenezes/cerebro:0.8.3
+    container_name: cerebro
+    ports:
+      - "9000:9000"
+    command:
+      - -Dhosts.0.host=http://elasticsearch:9200
+    networks:
+      - es7net
+
+volumes:
+  es7data1:
+    driver: local
+  es7data2:
+    driver: local
+
+networks:
+  es7net:
+    driver: bridge
+```
