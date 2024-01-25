@@ -2,7 +2,7 @@
 layout: page
 title: ELK简单介绍以及docker安装ek服务端
 category: 技术
-tags: nacos
+tags: elk
 ---
 {% include JB/setup %}
 
