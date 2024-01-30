@@ -1,0 +1,42 @@
+---
+layout: page
+title: containerd 空间清理
+category: linux
+tags: linux
+---
+{% include JB/setup %}
+
+### 背景
+    公司在使用阿里云 Kubernetes 服务 (ACK) 的基础版时，需要自行管理 ECS 服务器节点。一次，两台服务器报警表示存储空间不足，因此我们需要定期进行空间清理。
+
+### 思路
+    主要的存储空间占用来自于镜像和运行日志。因此，我们只需定期清理这两个部分即可。
+
+### 脚本
+
+#### 1.清理镜像
+**clearimage.sh**（保留最新两个镜像）
+```shell
+#!/bin/bash
+. /etc/profile
+. ~/.bash_profile
+
+/usr/bin/crictl images|grep "{镜像名称}"| awk 'NR>1{print p}{p=$0}' | awk 'NR>1{print p}{p=$3}' | xargs /usr/bin/crictl rmi
+
+```
+#### 2.清理消息日志
+**auto-del-3-days-ago-message-log.sh**(清理掉三天前的日志)
+
+```shell
+#!/bin/bash
+find /var/log/ -mtime +3 -name "messages-*" -exec rm -rf {} \;
+```
+
+#### 3.定时任务添加每日定时清理
+**crontab -e**
+```shell
+0 01 * * * /bin/bash /root/xdb/clearimage.sh &>/dev/null
+0 01 * * * /bin/bash /root/xdb/auto-del-3-days-ago-message-log.sh &>/dev/null
+```
+
+将这样的操作放在每个ECS服务器节点上,存储空间就能自动清理了。
