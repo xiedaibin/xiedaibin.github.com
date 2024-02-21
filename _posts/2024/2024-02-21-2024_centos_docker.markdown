@@ -1,0 +1,56 @@
+---
+layout: page
+title: CentOS 7.9上安装Docker
+category: linux
+tags: linux
+---
+{% include JB/setup %}
+
+要在CentOS 7.9上安装Docker，您可以按照以下步骤操作：
+
+1. **更新系统**：确保您的CentOS系统已更新到最新版本。您可以使用以下命令更新系统：
+
+```bash
+sudo yum update
+```
+
+2. **安装必要的依赖项**：安装一些必要的依赖项，以便能够通过yum安装Docker：
+
+```bash
+sudo yum install -y yum-utils device-mapper-persistent-data lvm2
+```
+
+3. **添加Docker存储库**：将Docker存储库添加到yum存储库列表中：
+
+```bash
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+```
+
+4. **安装Docker CE**：现在，您可以安装Docker CE（社区版）：
+
+```bash
+sudo yum install docker-ce
+```
+
+5. **启动Docker服务**：安装完成后，启动Docker服务：
+
+```bash
+sudo systemctl start docker
+```
+
+6. **设置Docker开机自启**：如果您希望Docker在系统启动时自动启动，请运行以下命令：
+
+```bash
+sudo systemctl enable docker
+```
+
+7. **验证安装**：最后，您可以运行以下命令来验证Docker是否成功安装：
+
+```bash
+sudo docker --version
+```
+
+这将显示Docker版本信息，确认Docker已成功安装在您的CentOS 7.9系统上。
+
+请注意，以上步骤假设您具有sudo权限或者已经以root用户身份登录。
+
