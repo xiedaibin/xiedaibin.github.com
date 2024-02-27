@@ -1,0 +1,89 @@
+---
+layout: page
+title:  asp.net core 写一个流式返回，并用js await fetch 接收并输出 的例子
+category: C#
+tags: web
+---
+{% include JB/setup %}
+
+服务端代码：
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace StreamExample.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class StreamController : ControllerBase
+    {
+        [HttpGet("streamdata")]
+        public async Task StreamData()
+        {
+            Response.ContentType = "text/event-stream";
+            var data = GetData(); // This method should return IEnumerable<string>
+
+            foreach (var item in data)
+            {
+                await Response.WriteAsync($"data: {item}\n\n");
+                await Response.Body.FlushAsync();
+                await Task.Delay(1000); // Simulating delay for demonstration purpose
+            }
+        }
+
+        private IEnumerable<string> GetData()
+        {
+            // Simulated data generation
+            for (int i = 0; i < 5; i++)
+            {
+                yield return $"Data {i}";
+            }
+        }
+    }
+}
+```
+
+这是一个ASP.NET Core的控制器，它会返回一系列的数据，通过流式返回的方式。数据以文本事件流（text/event-stream）的形式发送到客户端。接着，我们可以使用JavaScript的`fetch` API来获取并处理这些数据。
+
+下面是相应的前端代码：
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Example</title>
+</head>
+<body>
+    <div id="output"></div>
+
+    <script>
+        async function fetchData() {
+            const response = await fetch('/api/stream/streamdata');
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+
+                if (done) {
+                    break;
+                }
+
+                const text = decoder.decode(value, { stream: true });
+                document.getElementById('output').innerText += text + '\n';
+            }
+        }
+
+        fetchData();
+    </script>
+</body>
+</html>
+```
+
+这段JavaScript代码通过`fetch`从服务器获取数据流，然后使用`TextDecoder`将数据解码为文本，并将其追加到页面上的`output`元素中。
+
+请注意，这只是一个简单的示例。在实际应用中，你可能需要处理更复杂的数据和错误情况。
