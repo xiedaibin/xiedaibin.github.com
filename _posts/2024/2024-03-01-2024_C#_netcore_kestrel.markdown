@@ -26,7 +26,7 @@ tags: netcore
 
 ### 3. 代码中配置
 
-另一种常见的配置方式是直接在代码中进行配置。通过在Startup.cs文件中的ConfigureServices方法中添加如下代码，我们可以实现对Kestrel服务器的配置：
+通过在Startup.cs文件中的ConfigureServices方法中添加如下代码，我们可以实现对Kestrel服务器的配置：
 
 ```csharp
 //配置Kestrel服务器
