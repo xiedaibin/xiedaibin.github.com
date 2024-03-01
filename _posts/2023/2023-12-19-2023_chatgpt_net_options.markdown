@@ -2,7 +2,7 @@
 layout: page
 title: Options 模式的原理、好处和实现
 category: 设计模式
-tags: net core
+tags: netcore
 ---
 {% include JB/setup %}
 
