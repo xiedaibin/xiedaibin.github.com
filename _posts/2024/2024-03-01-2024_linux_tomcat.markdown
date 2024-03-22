@@ -1,0 +1,56 @@
+---
+layout: page
+title:  Tomcat安装
+category: 技术
+tags: java
+---
+{% include JB/setup %}
+
+要在CentOS上安装Apache Tomcat 8.5.99，你可以按照以下步骤进行操作：
+
+1. **安装Java**：Apache Tomcat需要Java的支持。确保你已经安装了Java。你可以通过以下命令来检查是否已经安装了Java：
+   ```
+   java -version
+   ```
+   如果没有安装，可以使用以下命令来安装OpenJDK 8：
+   ```
+   sudo yum install java-1.8.0-openjdk
+   ```
+
+2. **下载Tomcat**：你可以从Apache Tomcat的官方网站下载所需的版本。在终端中执行以下命令来下载：
+   ```
+   wget https://downloads.apache.org/tomcat/tomcat-8/v8.5.99/bin/apache-tomcat-8.5.99.tar.gz
+   ```
+
+3. **解压Tomcat**：使用以下命令解压下载的文件：
+   ```
+   tar -zxvf apache-tomcat-8.5.99.tar.gz
+   ```
+
+4. **移动Tomcat目录**：你可以将解压后的Tomcat目录移动到你想要的位置。比如，移动到 `/usr/local` 目录下：
+   ```
+   sudo mv apache-tomcat-8.5.99 /usr/local
+   ```
+
+5. **配置环境变量**：你可能希望将Tomcat的路径添加到系统的环境变量中，这样可以方便地在任何位置启动Tomcat。编辑 `/etc/profile` 文件：
+   ```
+   sudo nano /etc/profile
+   ```
+   在文件的末尾添加以下内容：
+   ```
+   export CATALINA_HOME=/usr/local/apache-tomcat-8.5.99
+   export PATH=$CATALINA_HOME/bin:$PATH
+   ```
+   保存并退出编辑器。然后执行以下命令以使更改生效：
+   ```
+   source /etc/profile
+   ```
+
+6. **启动Tomcat**：通过以下命令启动Tomcat服务器：
+   ```
+   catalina.sh start
+   ```
+
+7. **验证Tomcat是否已经启动**：在浏览器中访问 `http://localhost:8080`，如果一切正常，你将看到Tomcat的欢迎页面。
+
+现在，你已经成功安装和启动了Apache Tomcat 8.5.99。你可以根据需要配置和部署Web应用程序。
