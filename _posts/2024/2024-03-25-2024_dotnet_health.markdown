@@ -27,7 +27,7 @@ tags: netcore
 
 #### 服务端
 
-1. **健康检查注入**：根据需要注册需要检查的组件，如OpenID Connect Server、MySQL、RabbitMQ等。
+**1.健康检查注入**：根据需要注册需要检查的组件，如OpenID Connect Server、MySQL、RabbitMQ等。
 
 ```csharp
 var hcBuilder = context.Services.AddHealthChecks();
@@ -35,7 +35,7 @@ hcBuilder.AddDbContextCheck<WarehouseModuleDbContext>(tags: new[] { "mysqldb" })
     .AddCustomHealthCheck(configuration);
 ```
 
-2. **使用健康检查**：暴露健康检查根节点，并配置健康检查节点的地址。
+**2.使用健康检查**：暴露健康检查根节点，并配置健康检查节点的地址。
 
 ```csharp
 app.UseConfiguredEndpoints(endpoints =>
@@ -51,7 +51,7 @@ app.UseConfiguredEndpoints(endpoints =>
 
 #### 健康检查收集展示端
 
-1. **配置检查服务地址和存储地址**，以及预警机制等。
+**1.配置检查服务地址和存储地址**，以及预警机制等。
 
 ```csharp
 string healthCheckConnection = configuration["ConnectionStrings:HealthCheckConnection"];
