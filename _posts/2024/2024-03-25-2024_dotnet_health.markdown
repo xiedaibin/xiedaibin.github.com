@@ -1,0 +1,106 @@
+---
+layout: page
+title:  .net core下得健康检查服务
+category: 技术
+tags: netcore
+---
+{% include JB/setup %}
+
+## 健康检查服务：保障系统稳健运行的关键环节
+
+健康检查服务是确保系统运行正常的重要组成部分。它主要由两部分构成：**healthchecks-ui** 和服务添加健康检查端口（**/health**）。前者用于收集和展示服务的健康状况，后者则用于反馈单个服务的健康状态。
+
+### 概述
+
+在现代软件架构中，服务之间的健康状况监测是至关重要的。通过健康检查服务，我们可以及时发现并解决潜在的问题，确保整个系统的稳定性和可靠性。
+
+### 架构示意图
+
+![image](/images/article/20240325-144744.svg)
+
+### 示例
+
+- **健康检查服务页面**: [http://192.168.1.125:5004/healthchecks-ui](http://192.168.1.125:5004/healthchecks-ui)
+- **仓库服务健康检查状态**: [http://192.168.1.125:6804/health](http://192.168.1.125:6804/health)
+
+### 关键代码
+
+#### 服务端
+
+1. **健康检查注入**：根据需要注册需要检查的组件，如OpenID Connect Server、MySQL、RabbitMQ等。
+
+```csharp
+var hcBuilder = context.Services.AddHealthChecks();
+hcBuilder.AddDbContextCheck<WarehouseModuleDbContext>(tags: new[] { "mysqldb" })
+    .AddCustomHealthCheck(configuration);
+```
+
+2. **使用健康检查**：暴露健康检查根节点，并配置健康检查节点的地址。
+
+```csharp
+app.UseConfiguredEndpoints(endpoints =>
+{
+    //健康检查节点
+    endpoints.MapHealthChecks("/health", new HealthCheckOptions()
+    {
+        Predicate = _ => true,
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    });
+});
+```
+
+#### 健康检查收集展示端
+
+1. **配置检查服务地址和存储地址**，以及预警机制等。
+
+```csharp
+string healthCheckConnection = configuration["ConnectionStrings:HealthCheckConnection"];
+Log.Warning("健康检查UI存储地址:" + healthCheckConnection);
+if (string.IsNullOrEmpty(healthCheckConnection))
+{
+    throw new Exception("健康检查UI存储地址不存在");
+}
+builder.Services.AddHealthChecksUI(setupSettings =>
+{
+    var healthCheckServices = configuration["AppSetting:HealthCheckServices"];
+    if (!string.IsNullOrEmpty(healthCheckServices))
+    {
+        var healthCheckServiceList = healthCheckServices.Split(",");
+        foreach (var serviceName in healthCheckServiceList)
+        {
+            //服务地址
+            var serviceApiUrl = configuration[$"{serviceName}:ApiUrl"];
+            if (!string.IsNullOrEmpty(serviceApiUrl))
+            {
+                //检测站点，可以添加多条，UI中会把站点内的检测点分组显示
+                //注：这里有个约定 健康地址url为/health
+                setupSettings.AddHealthCheckEndpoint(name: $"{serviceName}", uri: $"{serviceApiUrl}health");
+            }
+        }
+    }
+
+    //消息服务
+    var messageServiceApiUrl = configuration["MessageService:ApiUrl"];
+
+    //当检测出异常结果时发送消息给API
+    var payloadContent = $"提醒类型:  健康检查提醒 {env}\n" +
+                                        $"服务: {serviceName}\n" +
+                                        $"内容: HealthCheck report for [[LIVENESS]]: [[FAILURE]] - Description: [[DESCRIPTIONS]]\n";
+    var restorePayloadContent = $"提醒类型:  健康检查提醒 {env}\n" +
+                                    $"服务: {serviceName}\n" +
+                                    $"内容: [[LIVENESS]] is back to life\n";
+    setupSettings.AddWebhookNotification("feishuhook",
+            uri: $"{messageServiceApiUrl}api/MessageService/DingTalk/SendToDingTalk",
+            payload: "{ \"Content\": \"" + payloadContent + "\"}",
+            restorePayload: "{ \"Content\": \"" + restorePayloadContent + "\"}");
+
+    setupSettings.SetMinimumSecondsBetweenFailureNotifications(60);
+    setupSettings.SetEvaluationTimeInSeconds(30);
+}).AddMySqlStorage(healthCheckConnection);
+```
+
+### 附录
+
+对于更深入的了解和实现细节，可以参考：[AspNetCore.Diagnostics.HealthChecks](https://github.com/Xabaril/AspNetCore.Diagnostics.HealthChecks)。
+
+通过以上配置和代码，我们建立了一个完整的健康检查系统，用于监测和管理各个服务的运行状态，从而确保系统的稳定性和可靠性。
