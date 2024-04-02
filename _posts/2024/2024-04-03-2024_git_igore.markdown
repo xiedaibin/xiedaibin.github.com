@@ -1,0 +1,27 @@
+---
+layout: page
+title:  git重置忽略规则
+category: 技术
+tags: git
+---
+{% include JB/setup %}
+
+一旦你修改了 `.gitignore` 文件并保存了更改，Git 会自动使用新的忽略规则。但是，如果你已经将某些文件纳入了版本控制系统并且现在想要将它们添加到忽略列表中，你需要手动将这些文件从 Git 的缓存中移除，然后再提交更改。
+
+你可以使用以下命令来完成这个操作：
+
+```bash
+git rm -r --cached .
+git add .
+git commit -m "Updated .gitignore"
+```
+
+这里的命令分别执行了以下操作：
+
+1. `git rm -r --cached .`：从 Git 缓存中递归删除所有文件和文件夹。这不会删除你的本地文件，只是将它们从 Git 的跟踪列表中移除。
+
+2. `git add .`：将所有文件重新添加到 Git 跟踪列表中，这样它们就会遵循新的 `.gitignore` 规则。
+
+3. `git commit -m "Updated .gitignore"`：提交更改，并添加一个描述性的提交消息。
+
+执行这些命令后，Git 将重新配置以符合新的忽略规则，并且将不再跟踪 `.gitignore` 文件中指定的被忽略的文件或文件夹。
