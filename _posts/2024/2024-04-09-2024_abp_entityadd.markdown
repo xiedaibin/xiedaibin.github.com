@@ -1,0 +1,79 @@
+---
+layout: page
+title:  ABP自动设置实体初始化字段属性值的实现方式
+category: 技术
+tags: ABP
+---
+{% include JB/setup %}
+
+### 自动设置实体初始化字段属性值的实现方式
+
+在使用 ABP 框架开发应用程序时，我们经常需要对实体进行管理和审计，其中包括跟踪实体的创建人信息。然而，ABP框架默认使用 GUID 类型的用户标识作为创建人ID，而在某些场景下，我们希望使用长整型（long）类型的用户ID，例如使用雪花算法生成的数字类型ID。
+
+本文将介绍如何在 ABP 框架中实现自动为实体设置创建人ID的功能，确保在实体初始化之后自动从认证信息中获取用户ID并赋值给相应属性。
+
+#### 接口定义
+
+首先，我们定义一个接口 `IHasCreateUserId`，用于标识具有创建人ID属性的实体。
+
+```csharp
+public interface IHasCreateUserId
+{
+    long CreateUserId { get; set; }
+}
+```
+
+#### DbContext 中重写方法
+
+接下来，我们需要在 ABP 的 `DbContext` 中重写 `ApplyAbpConceptsForAddedEntity` 方法，以便在实体新增时自动设置创建人ID。
+
+```csharp
+public class YourProjectNameDbContext : AbpDbContext
+{
+    // 其他代码...
+
+    protected override void ApplyAbpConceptsForAddedEntity(EntityEntry entry)
+    {
+        base.ApplyAbpConceptsForAddedEntity(entry);
+        SetCreateUserIdForAddedEntity(entry.Entity);
+    }
+
+    protected virtual void SetCreateUserIdForAddedEntity(object entity)
+    {
+        if (entity is IHasCreateUserId hasCreateUserIdEntity)
+        {
+            if (hasCreateUserIdEntity.CreateUserId != default)
+            {
+                return; // 如果已经设置过创建人ID，则不进行操作
+            }
+
+            // 从当前认证信息中获取用户ID（假设 ClUser 是能够获取当前用户信息的服务或类）
+            var userId = ClUser.UserId;
+
+            if (userId.HasValue)
+            {
+                hasCreateUserIdEntity.CreateUserId = userId.Value;
+            }
+            else
+            {
+                // 处理未能获取到有效用户ID的情况，例如抛出异常或记录日志
+                //throw new ApplicationException("无法获取当前用户ID。");
+            }
+        }
+    }
+}
+```
+
+在上述代码中：
+- `ApplyAbpConceptsForAddedEntity` 方法是 ABP 框架在实体新增时调用的核心方法之一，我们重写这个方法来自定义实体新增时的行为。
+- `SetCreateUserIdForAddedEntity` 方法用于根据当前认证信息设置实体的创建人ID属性。我们首先检查实体是否实现了 `IHasCreateUserId` 接口，然后从 `ClUser.UserId` 中获取用户ID，并将其赋值给实体的 `CreateUserId` 属性。
+
+#### 注意事项
+
+确保以下几点：
+- `ClUser.UserId` 是一个有效的服务或类，能够在需要时获取当前用户的ID。
+- 实体类需要实现 `IHasCreateUserId` 接口，以便在实体新增时能够自动设置创建人ID属性。
+
+#### 结论
+
+通过以上方式，我们可以在 ABP 框架中实现自动设置实体初始化字段属性值的功能，确保在实体新增时自动为创建人ID属性赋值，从而简化开发过程并提高代码的可维护性和规范性。
