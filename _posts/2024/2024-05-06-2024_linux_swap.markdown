@@ -1,0 +1,31 @@
+---
+layout: page
+title:  优化 Linux 系统性能：调整交换空间使用策略
+category: 技术
+tags: Linux
+---
+{% include JB/setup %}
+
+在管理 Linux 系统时，优化内存使用是提高系统性能的重要一环。Linux 内核提供了一个名为 `swappiness` 的参数，允许管理员调整系统对交换空间的使用策略，以满足不同工作负载下的需求。本文将介绍如何有效地调整 `swappiness` 值以优化系统性能。
+
+**1. 了解 `swappiness` 参数：**
+
+`swappiness` 参数位于 `/proc/sys/vm/swappiness` 文件中，用于指定 Linux 内核在做出换出决策时更倾向于使用交换空间的程度。该参数的取值范围是 0 到 100，其中：
+
+- 0 表示尽可能减少交换空间的使用，仅在极端情况下才使用交换空间。
+- 100 表示尽可能增加交换空间的使用，内核会更积极地将不活跃的内存页面移到交换空间中。
+
+**2. 更改 `swappiness` 值：**
+
+您可以通过编辑 `/etc/sysctl.conf` 文件来永久更改 `swappiness` 值，也可以通过 `sysctl` 命令在运行时进行临时更改。
+
+永久更改 `swappiness` 值的步骤如下：
+
+- 使用文本编辑器打开 `/etc/sysctl.conf` 文件。
+- 在文件末尾添加 `vm.swappiness=新值`，其中 `新值` 是您希望设置的新的 `swappiness` 值。
+- 保存并关闭文件。
+- 使用 `sudo systemctl restart systemd-sysctl` 命令使更改生效。
+
+**结论：**
+
+通过调整 Linux 系统的 `swappiness` 参数，管理员可以优化系统的内存管理策略，从而提高系统的性能和稳定性。根据特定的工作负载和应用需求，适时地调整 `swappiness` 值是管理 Linux 系统的一项重要任务。
