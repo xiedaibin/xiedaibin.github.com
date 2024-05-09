@@ -1,0 +1,102 @@
+---
+layout: page
+title:  JWT权限验证 在asp.net core mvc 中是如何实现的
+category: 技术
+tags: mysql
+---
+{% include JB/setup %}
+
+### JWT配置
+JWT（JSON Web Token）是一种用于身份验证和授权的开放标准（RFC 7519），它允许将声明安全地传输为 JSON 对象，并使用数字签名进行验证。在 ASP.NET Core MVC 中，实现 JWT 权限验证通常需要以下步骤：
+
+1. **安装依赖项**：首先，你需要安装适用于 ASP.NET Core 的 JWT 相关的包，例如 `Microsoft.AspNetCore.Authentication.JwtBearer`。
+
+   ```bash
+   dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+   ```
+
+2. **配置认证服务**：在 `Startup.cs` 文件的 `ConfigureServices` 方法中，添加身份验证服务，并配置 JWT Bearer 身份验证方案。
+
+   ```csharp
+   services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+       .AddJwtBearer(options =>
+       {
+           options.TokenValidationParameters = new TokenValidationParameters
+           {
+               ValidateIssuer = true,
+               ValidateAudience = true,
+               ValidateLifetime = true,
+               ValidateIssuerSigningKey = true,
+               ValidIssuer = Configuration["Jwt:Issuer"],
+               ValidAudience = Configuration["Jwt:Issuer"],
+               IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:Key"]))
+           };
+       });
+   ```
+
+   在这里，你需要从配置文件（比如 `appsettings.json`）中获取 JWT 相关的配置信息，比如签发者、受众、密钥等。
+
+3. **使用身份验证**：在 `Configure` 方法中启用身份验证中间件。
+
+   ```csharp
+   app.UseAuthentication();
+   ```
+
+4. **控制器或动作方法中使用权限验证**：你可以通过添加 `[Authorize]` 特性来保护你的控制器或动作方法，这将要求用户在访问这些资源时提供有效的 JWT。
+
+   ```csharp
+   [Authorize]
+   public class MyController : Controller
+   {
+       // Actions
+   }
+   ```
+
+   如果你需要特定角色或策略来访问资源，你可以在 `[Authorize]` 特性中指定相应的角色或策略。
+
+   ```csharp
+   [Authorize(Roles = "Admin")]
+   public IActionResult AdminAction()
+   {
+       // Action logic
+   }
+   ```
+
+5. **生成 JWT**：当用户登录成功后，你需要生成 JWT 并将其返回给客户端。通常，你可以使用第三方库（如 `System.IdentityModel.Tokens.Jwt`）来创建 JWT。
+
+   ```csharp
+   var tokenHandler = new JwtSecurityTokenHandler();
+   var key = Encoding.ASCII.GetBytes("your_secret_key");
+   var tokenDescriptor = new SecurityTokenDescriptor
+   {
+       Subject = new ClaimsIdentity(new Claim[]
+       {
+           new Claim(ClaimTypes.Name, "username"),
+           // Add other claims
+       }),
+       Expires = DateTime.UtcNow.AddHours(1),
+       SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+   };
+   var token = tokenHandler.CreateToken(tokenDescriptor);
+   var tokenString = tokenHandler.WriteToken(token);
+   ```
+
+这就是使用 JWT 实现权限验证的基本步骤。当用户发送带有 JWT 的请求时，ASP.NET Core MVC 会自动验证 JWT 的有效性，并根据配置的策略来授权用户访问资源。
+
+###  ASP.NET Core MVC验证Jwt
+
+当 ASP.NET Core MVC 接收到一个带有 JWT 的请求时，它会自动进行以下步骤来验证 JWT 的有效性，并根据配置的策略来授权用户访问资源：
+
+1. **JWT 解析**：首先，ASP.NET Core MVC 会从请求中提取 JWT。通常，JWT 被包含在 HTTP 请求的头部中，例如 `Authorization` 头部。如果 JWT 存在于其他位置（如请求参数或请求体），你也可以配置 ASP.NET Core MVC 来提取它。
+
+2. **JWT 验证**：一旦 JWT 被提取，ASP.NET Core MVC 将会验证 JWT 的签名和有效期。这个过程包括以下几个步骤：
+
+   - **签名验证**：ASP.NET Core MVC 会使用 JWT 中指定的算法和密钥来验证签名的有效性。如果签名验证失败，JWT 将被认为是无效的，请求将被拒绝。
+
+   - **有效期验证**：ASP.NET Core MVC 会检查 JWT 中的有效期（`exp` 声明），以确保 JWT 尚未过期。如果 JWT 的有效期已过，请求也将被拒绝。
+
+3. **声明提取**：一旦 JWT 被验证为有效，ASP.NET Core MVC 将会从 JWT 中提取声明。声明是 JWT 中包含的一些关于用户身份、角色等信息的键值对。这些声明可以用于后续的授权决策。
+
+4. **授权**：根据 JWT 中提取的声明以及在控制器或动作方法上配置的授权策略，ASP.NET Core MVC 将决定是否允许用户访问请求的资源。授权策略可以基于用户的角色、声明、特定的要求等进行配置。如果用户的 JWT 不包含必要的声明或不满足授权策略，请求将被拒绝，并返回相应的状态码（通常是 401 Unauthorized）。
+
+这些步骤的执行是由 ASP.NET Core MVC 框架自动处理的，你无需手动编写代码来完成 JWT 的验证和授权过程。只需配置好身份验证中间件和授权策略，框架就会自动处理接收到的请求并根据配置的规则进行验证和授权。
