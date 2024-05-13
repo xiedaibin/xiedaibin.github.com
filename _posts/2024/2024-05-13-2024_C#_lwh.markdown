@@ -1,0 +1,95 @@
+---
+layout: page
+title:  长方体堆叠
+category: 技术
+tags: C#
+---
+{% include JB/setup %}
+
+
+首先，我们需要确定可能的堆叠组合。考虑到所有长方体的尺寸相同，我们可以通过确定三个维度（长度、宽度、高度）上各有多少个长方体堆叠来计算新长方体 
+L, W, H 的尺寸。假设在长度方向上堆叠了 x 个长方体，宽度方向上堆叠了 y 个长方体，高度方向上堆叠了 z 个长方体，那么新长方体的尺寸可以表示为：
+长度 L=x×l
+宽度 W=y×w
+高度 H=z×h
+并且 x, y, z 必须满足 x×y×z=n，即长方体的数量总和等于 n。这个约束确保了所有的长方体都被用于构建新的长方体。
+
+目标函数是最小化新长方体的周长和 4(L+W+H)，即：
+
+Pnew=4(xl+yw+zh)
+
+我们可以使用穷举法（考虑到 n 的因数分解）来找到最小的周长和。接下来，我将用 C# 编写一个程序，通过穷举所有可能的 
+x, y, z 组合（它们必须是 n 的因子）来计算并找到最小的周长和。
+
+   ```csharp
+using System;
+using System.Collections.Generic;
+
+class RectangleStacking {
+    public int l, w, h, n;
+
+    public RectangleStacking(int length, int width, int height, int count) {
+        l = length;
+        w = width;
+        h = height;
+        n = count;
+    }
+
+    // 方法用于寻找所有n的因数
+    private List<int> FindFactors(int number) {
+        List<int> factors = new List<int>();
+        for (int i = 1; i <= Math.Sqrt(number); i++) {
+            if (number % i == 0) {
+                factors.Add(i);
+                if (i != number / i) {
+                    factors.Add(number / i);
+                }
+            }
+        }
+        return factors;
+    }
+
+    public void FindMinimumPerimeter() {
+        int minPerimeter = int.MaxValue;
+        int minL = 0;
+        int minW = 0;
+        int minH = 0;
+        List<int> factors = FindFactors(n);
+
+        // 穷举所有可能的x, y, z组合
+        foreach (int x in factors) {
+            foreach (int y in factors) {
+                int z = n / (x * y);
+                if (x * y * z == n) {  // 确保x, y, z的乘积等于n
+                    int L = x * l;
+                    int W = y * w;
+                    int H = z * h;
+                    int perimeter = 4 * (L + W + H);
+                    if (perimeter < minPerimeter) {
+                        minPerimeter = perimeter;
+                        minL = L;
+                        minW = W;
+                        minH = H;
+                    }
+                }
+            }
+        }
+        Console.WriteLine("Minimum perimeter is: " + minPerimeter);
+        Console.WriteLine("Minimum L W H is: " + $"{minL} {minW} {minH}");
+    }
+}
+
+class Program {
+    static void Main() {
+        int l = 1; // 长方体的长度
+        int w = 2; // 长方体的宽度
+        int h = 3; // 长方体的高度
+        int n = 12; // 长方体的数量
+
+        RectangleStacking stacking = new RectangleStacking(l, w, h, n);
+        stacking.FindMinimumPerimeter();
+    }
+}
+   ```
+这段代码通过计算 
+n 的所有因子并尝试所有有效的x, y, z 组合来寻找最小周长和。它确保每一组 x, y, z 的乘积
