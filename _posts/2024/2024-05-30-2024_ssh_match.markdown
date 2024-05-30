@@ -1,0 +1,113 @@
+---
+layout: page
+title:   检查私钥 id_rsa 和公钥 id_rsa.pub 是否匹配
+category: 技术
+tags: 前端
+---
+{% include JB/setup %}
+###
+
+要检查你的私钥 `id_rsa` 和公钥 `id_rsa.pub` 是否匹配（即它们是否是一对），你可以使用以下方法：
+
+### 方法1：直接比较公钥指纹
+
+1. **生成私钥的指纹**：
+
+    使用 `ssh-keygen` 命令来生成私钥的指纹：
+
+    ```sh
+    ssh-keygen -lf /root/.ssh/id_rsa
+    ```
+
+    输出将类似于：
+
+    ```
+    2048 SHA256:... /root/.ssh/id_rsa (RSA)
+    ```
+
+2. **生成公钥的指纹**：
+
+    使用 `ssh-keygen` 命令来生成公钥的指纹：
+
+    ```sh
+    ssh-keygen -lf /root/.ssh/id_rsa.pub
+    ```
+
+    输出将类似于：
+
+    ```
+    2048 SHA256:... /root/.ssh/id_rsa.pub (RSA)
+    ```
+
+3. **比较两个指纹**：
+
+    如果两个指纹相同，那么公钥和私钥是一对。
+
+### 方法2：提取私钥对应的公钥并比较
+
+1. **从私钥生成公钥**：
+
+    使用 `ssh-keygen -y` 命令从私钥生成公钥，然后比较生成的公钥和已有的公钥是否一致：
+
+    ```sh
+    ssh-keygen -y -f /root/.ssh/id_rsa > /tmp/generated_pub_key
+    ```
+
+2. **比较生成的公钥和现有公钥**：
+
+    使用 `diff` 或 `cmp` 命令来比较：
+
+    ```sh
+    diff /tmp/generated_pub_key /root/.ssh/id_rsa.pub
+    ```
+
+    或者：
+
+    ```sh
+    cmp /tmp/generated_pub_key /root/.ssh/id_rsa.pub
+    ```
+
+    如果没有输出，那么这两个文件是相同的，说明私钥和公钥是一对。
+
+### 示例过程
+
+1. **生成私钥指纹**：
+
+    ```sh
+    ssh-keygen -lf /root/.ssh/id_rsa
+    ```
+
+    输出示例：
+
+    ```
+    2048 SHA256:ABC123... /root/.ssh/id_rsa (RSA)
+    ```
+
+2. **生成公钥指纹**：
+
+    ```sh
+    ssh-keygen -lf /root/.ssh/id_rsa.pub
+    ```
+
+    输出示例：
+
+    ```
+    2048 SHA256:ABC123... /root/.ssh/id_rsa.pub (RSA)
+    ```
+
+3. **比较指纹**：
+
+    确认指纹相同。如果相同，则说明密钥匹配。
+
+4. **从私钥生成公钥并比较**：
+
+    ```sh
+    ssh-keygen -y -f /root/.ssh/id_rsa > /tmp/generated_pub_key
+    diff /tmp/generated_pub_key /root/.ssh/id_rsa.pub
+    ```
+
+    如果 `diff` 命令没有输出，说明文件内容相同，密钥匹配。
+
+### 结论
+
+通过以上方法，你可以确认 `id_rsa` 和 `id_rsa.pub` 是否是一对。如果它们匹配，可以确保使用该私钥进行 SSH 连接，并且在远程服务器上的 `authorized_keys` 文件中包含对应的公钥，能够无密码登录。
