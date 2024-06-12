@@ -60,6 +60,7 @@ public class MyViewModel
 ```
 
 在XAML中绑定命令：
+
 ```xml
 <Window.DataContext>
     <local:MyViewModel/>
