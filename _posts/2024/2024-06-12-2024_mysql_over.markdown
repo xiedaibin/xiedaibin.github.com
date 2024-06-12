@@ -1,0 +1,135 @@
+---
+layout: page
+title:   如何通过MySQL窗口函数高效更新同一张表连续两条数据和验证
+category: 技术
+tags: mysql
+---
+{% include JB/setup %}
+
+在数据库开发和维护过程中，数据的一致性和准确性至关重要。本文将展示如何使用MySQL窗口函数高效地更新和验证同一张表中连续两条数据。我们的具体需求是：对于每个 `ProductId`，如果有两条记录，那么第二条记录的 `BeginNumber` 需要比第一条记录的 `EndNumber` 大1。
+
+#### 公用表表达式（CTE）
+
+在介绍具体的操作之前，先解释一下公用表表达式（Common Table Expressions，简称CTE）。CTE是一个临时结果集，可以在一个SELECT、INSERT、UPDATE或DELETE语句中被引用。CTE通过 `WITH` 关键字定义，可以使复杂查询更易读、更简洁。
+
+#### 更新操作
+
+要实现更新操作，我们可以按以下步骤进行：
+
+1. **创建一个公用表表达式 (CTE)**：提取和排序数据。
+2. **提取第一条和第二条记录**：分别创建两个CTE。
+3. **筛选需要更新的记录**：创建一个CTE，找出满足条件的记录。
+4. **更新数据**：通过 `UPDATE` 语句更新 `BeginNumber`。
+
+以下是具体的SQL代码：
+
+```sql
+-- 使用CTE进行数据处理
+WITH RankedSettings AS (
+    SELECT 
+        Id,
+        ProductId,
+        CreationTime,
+        BeginNumber,
+        EndNumber,
+        ROW_NUMBER() OVER (PARTITION BY ProductId ORDER BY CreationTime) AS RowNum
+    FROM 
+        sc_productbatchbuysettings
+    WHERE 
+        IsDeleted = 0
+),
+CTE1 AS (
+    SELECT 
+        Id,
+        ProductId,
+        BeginNumber,
+        EndNumber,
+        RowNum
+    FROM 
+        RankedSettings
+    WHERE 
+        RowNum = 1
+),
+CTE2 AS (
+    SELECT 
+        Id,
+        ProductId,
+        BeginNumber,
+        RowNum
+    FROM 
+        RankedSettings
+    WHERE 
+        RowNum = 2
+),
+Changes AS (
+    SELECT 
+        CTE2.Id AS Id2,
+        CTE2.BeginNumber AS NewBeginNumber
+    FROM 
+        CTE1
+    JOIN 
+        CTE2
+    ON 
+        CTE1.ProductId = CTE2.ProductId
+    WHERE 
+        CTE1.EndNumber = CTE2.BeginNumber
+)
+-- 更新原表中的BeginNumber
+UPDATE 
+    sc_productbatchbuysettings AS s
+JOIN 
+    Changes
+ON 
+    s.Id = Changes.Id2
+SET 
+    s.BeginNumber = Changes.NewBeginNumber + 1;
+```
+
+这个过程如下：
+- **RankedSettings CTE**：为每个 `ProductId` 创建一个分区，并根据 `CreationTime` 对记录进行排序，生成行号 `RowNum`。
+- **CTE1 和 CTE2**：分别提取每个 `ProductId` 的第一条和第二条记录。
+- **Changes CTE**：找出 `EndNumber` 等于第二条记录的 `BeginNumber` 的记录。
+- **UPDATE 语句**：更新第二条记录的 `BeginNumber`。
+
+#### 验证操作
+
+在执行更新操作后，我们需要验证数据的一致性。具体来说，我们需要确保每对连续记录的 `EndNumber` 和 `BeginNumber` 满足 `EndNumber + 1 = BeginNumber`。以下是验证的SQL代码：
+
+```sql
+-- 检查SQL
+WITH RankedSettings AS (
+    SELECT 
+        ProductId,
+        CreationTime,
+        EndNumber,
+        BeginNumber,
+        LAG(EndNumber) OVER (PARTITION BY ProductId ORDER BY CreationTime) AS PrevEndNumber
+    FROM 
+        sc_productbatchbuysettings
+    WHERE 
+        IsDeleted = 0
+)
+SELECT 
+    ProductId,
+    CreationTime,
+    EndNumber,
+    BeginNumber,
+    PrevEndNumber
+FROM 
+    RankedSettings
+WHERE 
+    PrevEndNumber IS NOT NULL
+    AND BeginNumber <> PrevEndNumber + 1;
+```
+
+这个查询的过程如下：
+- **RankedSettings CTE**：为每个 `ProductId` 创建一个分区，并根据 `CreationTime` 对记录进行排序。使用 `LAG()` 函数获取每条记录的前一条记录的 `EndNumber`，命名为 `PrevEndNumber`。
+- **主查询**：选择 `PrevEndNumber` 不为 `NULL` 且 `BeginNumber` 不等于 `PrevEndNumber + 1` 的记录。
+
+如果查询结果为空，则表示所有连续记录的 `EndNumber` 都等于 `BeginNumber - 1`；否则，查询结果将列出不符合条件的记录。
+
+#### 结论
+
+通过使用CTE和窗口函数，我们可以高效地更新和验证同一张表中连续两条数据的正确性。这种方法不仅简化了复杂的数据处理逻辑，还提高了查询和更新操作的性能。希望本文对你在数据库开发和维护过程中有所帮助。
+
+如果你对本文有任何疑问或建议，欢迎在下方留言讨论。感谢阅读！
