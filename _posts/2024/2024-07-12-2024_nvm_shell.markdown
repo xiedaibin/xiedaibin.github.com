@@ -1,0 +1,88 @@
+---
+layout: page
+title:   使用 nvm 管理 Node.js 版本的常用命令总结
+category: 技术
+tags: 前端
+---
+{% include JB/setup %}
+
+### 使用 nvm 管理 Node.js 版本的常用命令总结
+
+在前端开发中，Node.js 是一个非常重要的工具。而随着项目的不断发展，可能会需要不同版本的 Node.js 来满足不同项目的需求。这时候，Node Version Manager（nvm）就派上用场了。nvm 是一个管理多个 Node.js 版本的工具，允许你轻松地安装、卸载和切换 Node.js 版本。本文将总结一些 nvm 的常用命令，帮助你更好地管理你的 Node.js 环境。
+
+#### 安装 nvm
+
+首先，你需要安装 nvm。可以参考 [nvm 的 GitHub 仓库](https://github.com/nvm-sh/nvm) 进行安装。
+
+#### nvm 常用命令
+
+以下是一些常用的 nvm 命令，以表格形式展示：
+
+| 命令 | 描述 |
+| --- | --- |
+| `nvm install <version>` | 安装指定版本的 Node.js，例如：`nvm install 14.17.0` |
+| `nvm uninstall <version>` | 卸载指定版本的 Node.js，例如：`nvm uninstall 14.17.0` |
+| `nvm use <version>` | 切换到指定版本的 Node.js，例如：`nvm use 14.17.0` |
+| `nvm current` | 显示当前使用的 Node.js 版本 |
+| `nvm ls` | 列出所有已安装的 Node.js 版本 |
+| `nvm ls-remote` | 列出所有可以安装的 Node.js 版本（从远程服务器获取） |
+| `nvm alias <name> <version>` | 为指定版本创建别名，例如：`nvm alias default 14.17.0` |
+| `nvm unalias <name>` | 删除指定别名，例如：`nvm unalias default` |
+| `nvm reinstall-packages <version>` | 在当前版本 Node.js 下重新安装指定版本的全局包 |
+| `nvm list` | 列出所有已安装的 Node.js 版本（与 `nvm ls` 相同） |
+| `nvm version` | 显示当前 nvm 版本 |
+| `nvm deactivate` | 退出 nvm 管理的 Node.js 版本，使其恢复到系统默认状态 |
+| `nvm which <version>` | 显示指定版本 Node.js 的可执行文件路径 |
+
+#### 命令详解
+
+1. **安装 Node.js 版本**
+   - 使用 `nvm install <version>` 命令安装指定版本的 Node.js。例如，要安装版本 14.17.0，运行：
+     ```bash
+     nvm install 14.17.0
+     ```
+
+2. **卸载 Node.js 版本**
+   - 使用 `nvm uninstall <version>` 命令卸载指定版本的 Node.js。例如，要卸载版本 14.17.0，运行：
+     ```bash
+     nvm uninstall 14.17.0
+     ```
+
+3. **切换 Node.js 版本**
+   - 使用 `nvm use <version>` 命令切换到指定版本的 Node.js。例如，要切换到版本 14.17.0，运行：
+     ```bash
+     nvm use 14.17.0
+     ```
+
+4. **查看当前 Node.js 版本**
+   - 使用 `nvm current` 命令显示当前使用的 Node.js 版本。
+
+5. **列出已安装的 Node.js 版本**
+   - 使用 `nvm ls` 或 `nvm list` 命令列出所有已安装的 Node.js 版本。
+
+6. **列出远程可安装的 Node.js 版本**
+   - 使用 `nvm ls-remote` 命令列出所有可以安装的 Node.js 版本（从远程服务器获取）。
+
+7. **为指定版本创建别名**
+   - 使用 `nvm alias <name> <version>` 命令为指定版本创建别名。例如，为版本 14.17.0 创建别名 `default`，运行：
+     ```bash
+     nvm alias default 14.17.0
+     ```
+
+8. **删除别名**
+   - 使用 `nvm unalias <name>` 命令删除指定别名。例如，删除别名 `default`，运行：
+     ```bash
+     nvm unalias default
+     ```
+
+9. **重新安装全局包**
+   - 使用 `nvm reinstall-packages <version>` 命令在当前版本 Node.js 下重新安装指定版本的全局包。
+
+10. **显示 nvm 版本**
+    - 使用 `nvm version` 命令显示当前 nvm 版本。
+
+11. **退出 nvm 管理**
+    - 使用 `nvm deactivate` 命令退出 nvm 管理的 Node.js 版本，使其恢复到系统默认状态。
+
+12. **显示 Node.js 可执行文件路径**
+    - 使用 `nvm which <version>` 命令显示指定版本 Node.js 的可执行文件路径。
