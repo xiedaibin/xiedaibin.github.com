@@ -1,0 +1,133 @@
+---
+layout: page
+title:   如何安全地清空或删除 /var/log 下的 mysqld.log 和 journal 日志文件
+category: 技术
+tags: Linux
+---
+{% include JB/setup %}
+
+在 Linux 系统中，日志文件可以迅速占用大量磁盘空间，尤其是数据库日志（如 `mysqld.log`）和系统日志（如 `journal`）。如果这些日志文件过大，可能会影响系统性能和可用空间。本文将介绍如何安全地清空或删除 `/var/log` 下的 `mysqld.log` 和 `journal` 文件，以便有效管理磁盘空间。
+
+#### 一、清理 `mysqld.log`
+
+MySQL 的日志文件可以通过以下几种方式安全地清理：
+
+##### 1. 使用 `truncate` 命令清空日志文件
+
+`truncate` 命令可以清空日志文件而不删除文件本身，避免服务因找不到日志文件而出现问题。
+
+```bash
+sudo truncate -s 0 /var/log/mysqld.log
+```
+
+##### 2. 使用 `logrotate` 自动管理日志文件
+
+`logrotate` 是一个日志管理工具，可以自动轮换、压缩和删除日志文件，确保日志不会无限制地增长。
+
+创建或修改一个 logrotate 配置文件，例如 `/etc/logrotate.d/mysql`：
+
+```plaintext
+/var/log/mysqld.log {
+    daily
+    missingok
+    rotate 7
+    compress
+    delaycompress
+    notifempty
+    create 640 mysql adm
+    sharedscripts
+    postrotate
+        # 重新打开 MySQL 日志文件
+        systemctl reload mysql
+    endscript
+}
+```
+
+该配置将每天轮换日志，保留最近 7 天的日志，并压缩旧的日志文件。
+
+### 详细解释
+
+- **`/var/log/mysqld.log`**：
+  - 这是你希望 `logrotate` 管理的日志文件的路径。
+
+- **`daily`**：
+  - 表示日志文件会每天轮换一次。其他选项包括 `weekly`（每周一次）和 `monthly`（每月一次）。
+
+- **`missingok`**：
+  - 如果日志文件不存在，不会报告错误或中止轮换过程。这在日志文件可能不会每天生成的情况下很有用。
+
+- **`rotate 7`**：
+  - 保留最近的 7 个日志文件（包括当前的日志文件）。这意味着将有 7 个历史日志文件，超出这个数量的旧日志文件将被删除。
+
+- **`compress`**：
+  - 轮换后的日志文件会被压缩。默认的压缩格式是 `gzip`，生成的文件扩展名为 `.gz`。
+
+- **`delaycompress`**：
+  - 配合 `compress` 使用。表示延迟一个轮换周期才压缩日志文件。这意味着最新轮换的日志文件不会立即被压缩，只有再下一次轮换时才会被压缩。这可以避免一些应用在日志文件刚被轮换后还需要立即写入旧日志文件时遇到的问题。
+
+- **`notifempty`**：
+  - 如果日志文件是空的，不会进行轮换。这有助于避免生成无意义的空日志文件。
+
+- **`create 640 mysql adm`**：
+  - 每次轮换日志文件时，会创建一个新的日志文件。新文件的权限设置为 `640`，拥有者是 `mysql` 用户，所属组是 `adm`。这确保新日志文件有适当的权限和拥有者。
+
+- **`sharedscripts`**：
+  - 表示如果一个日志文件有多个文件（例如由 `*` 通配符匹配），`postrotate` 和 `prerotate` 脚本只会运行一次，而不是对每个文件运行一次。
+
+- **`postrotate`**：
+  - 表示在日志文件轮换后运行的脚本。这个块中的命令会在日志文件轮换后执行。
+
+  - **`systemctl reload mysql`**：
+    - 这是在 `postrotate` 块中运行的命令。`systemctl reload mysql` 命令会重新加载 MySQL 服务。这是必要的，因为 MySQL 在日志文件被轮换后需要重新打开新的日志文件句柄。如果不重新加载服务，MySQL 可能会继续向已经被轮换的旧日志文件写入数据。
+
+- **`endscript`**：
+  - 表示 `postrotate` 块结束的地方。
+
+### 总结
+
+这个 `logrotate` 配置文件旨在确保 MySQL 日志文件不会无限制地增长，通过每日轮换日志文件并保留最近 7 个日志文件，同时压缩旧的日志文件来节省空间。通过 `postrotate` 脚本重新加载 MySQL 服务，确保新的日志文件能够正确地被 MySQL 使用。
+
+你可以将这些解释添加到博客文章中，以帮助读者更好地理解和配置 `logrotate`。
+
+#### 二、清理 `journal` 日志
+
+系统日志（由 `journald` 记录）也可能占用大量空间。可以通过以下方法进行清理：
+
+##### 1. 删除旧的 `journal` 日志
+
+使用 `journalctl` 命令删除旧的日志：
+
+```bash
+# 删除 7 天前的日志
+sudo journalctl --vacuum-time=7d
+```
+
+##### 2. 设置 `journald` 日志的最大使用空间
+
+编辑 `journald` 配置文件 `/etc/systemd/journald.conf`，设置 `SystemMaxUse` 以限制日志的最大磁盘使用量，例如 1GB：
+
+```plaintext
+[Journal]
+SystemMaxUse=1G
+```
+
+然后重启 `systemd-journald` 服务以应用更改：
+
+```bash
+sudo systemctl restart systemd-journald
+```
+
+#### 三、备份并删除日志文件
+
+在清理日志之前，可以先备份日志文件以防需要查看历史日志：
+
+```bash
+# 备份 mysqld.log
+sudo cp /var/log/mysqld.log /var/log/mysqld.log.bak
+
+# 备份并删除 journal 日志
+sudo tar czf /var/log/journal-logs-backup.tar.gz /var/log/journal
+sudo rm -rf /var/log/journal/*
+```
+
+通过以上步骤，你可以安全地清理或删除 `/var/log` 下的 `mysqld.log` 和 `journal` 文件，以释放磁盘空间。在执行这些操作时，请确保不会影响系统和服务的正常运行。定期检查和清理日志文件是保持系统健康和稳定的重要措施。

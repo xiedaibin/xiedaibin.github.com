@@ -2,7 +2,7 @@
 layout: page
 title:   深入理解 Span<T> 和 Memory<T>：高效内存操作的利器
 category: 技术
-tags: Shell Mysql
+tags: C#
 ---
 {% include JB/setup %}
 
