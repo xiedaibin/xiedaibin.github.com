@@ -1,0 +1,51 @@
+---
+layout: page
+title:   如何查询 API 证书是否过期
+category: 技术
+tags: ssl
+---
+{% include JB/setup %}
+
+在使用 API 时，确保其 HTTPS 证书的有效性至关重要。如果证书过期，不仅会影响数据传输的安全性，还可能导致 API 无法正常访问。更新了API证书如何确认证书是否已经更新成功。在这篇文章中，我们将介绍几种常用的方法来检查 API 的 HTTPS 证书是否过期。
+
+#### 方法 1：使用在线工具
+
+如果你想快速检查 API 的证书状态，使用在线工具是最方便的选择。以下是两个常用的在线工具：
+
+1. **SSL Labs 的 SSL Test**
+   - 访问 [SSL Labs](https://www.ssllabs.com/ssltest/index.html) 网站。
+   - 输入 API 的 URL，例如 `https://api.moyiship.com`。
+   - 点击 **“Submit”** 按钮。
+   - SSL Labs 将自动检测并显示证书的详细信息，包括其有效期。
+
+2. **SSL Shopper 的 SSL Checker**
+   - 访问 [SSL Checker](https://www.sslshopper.com/ssl-checker.html) 网站。
+   - 输入 API 的 URL。
+   - 点击 **“Check SSL”** 按钮。
+   - 你将看到证书的详细信息，包括过期日期。
+
+这些在线工具提供的报告不仅显示证书的有效期，还包括其他安全性指标，让你全面了解 API 的安全状况。
+
+#### 方法 2：使用 OpenSSL 命令行工具
+
+对于开发者或运维人员，使用命令行工具可能更为直观。`OpenSSL` 是一个强大的工具，可以通过命令行直接查询证书的有效期。
+
+1. 打开你的终端（Linux 或 macOS）。
+2. 输入以下命令：
+   ```bash
+   echo | openssl s_client -connect api.moyiship.com:443 2>/dev/null | openssl x509 -noout -dates
+   ```
+3. 该命令会返回证书的开始日期和过期日期，如下所示：
+   ```bash
+   notBefore=Aug  7 12:00:00 2023 GMT
+   notAfter=Nov  5 12:00:00 2024 GMT
+   ```
+   你可以根据返回的 `notAfter` 日期来判断证书是否过期。
+
+使用 `OpenSSL` 允许你在本地快速检测证书的状态，非常适合在不方便使用浏览器或在线工具时进行检查。
+
+#### 总结
+
+保持 API 的 HTTPS 证书在有效期内是确保通信安全的重要步骤。无论是使用在线工具还是命令行工具，都可以轻松检测证书的过期状态，确保你的服务始终保持在最佳安全状态。如果你习惯使用浏览器进行检查，也可以考虑尝试其他浏览器或更新你的浏览器版本以兼容证书查询功能。
+
+希望这篇文章能帮助你轻松检测 API 证书的有效性，为你的开发和运维工作提供支持。
