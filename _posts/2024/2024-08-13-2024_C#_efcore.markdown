@@ -1,0 +1,52 @@
+---
+layout: page
+title:   如何解决 Entity Framework Core 中 Add-Migration 失败的问题
+category: 技术
+tags: efcore
+---
+{% include JB/setup %}
+
+在使用 Entity Framework Core 的过程中，开发者可能会遇到在执行 `Add-Migration` 命令时出现 "Build failed" 的错误提示。这通常意味着项目在编译时出现了问题。本文将详细介绍如何查看并解决这些问题，以确保你能够顺利生成数据库迁移脚本。
+
+#### 1. 正确设置 NuGet 管理包的默认项目和启动项目
+
+在执行 `Add-Migration` 命令时，确保你已经正确设置了 **NuGet 管理包的默认项目** 和 **启动项目**：
+
+- **NuGet 管理包的默认项目**：选择包含 `DbContext` 的项目，通常是你的数据访问层项目（Data Access Layer, DAL）。这个项目包含了你的实体模型和 `DbContext` 类，负责执行迁移操作。
+
+- **启动项目**：选择应用程序的主项目，如 Web 应用程序（ASP.NET Core 项目）或控制台应用程序。启动项目包含应用程序的 `Startup` 类或 `Program` 类，负责提供 EF Core 需要的配置和依赖注入设置。
+
+#### 2. 检查 Visual Studio 的“输出”窗口
+
+在 Visual Studio 中执行 `Add-Migration` 命令后，可以通过“输出”窗口查看构建失败的详细信息：
+
+- 打开“输出”窗口：点击 `视图 > 输出`，或使用快捷键 `Ctrl + Alt + O`。
+- 选择 “Build” 选项：在窗口右上角的下拉菜单中选择“Build”。
+- 查看详细错误信息：执行命令后，“输出”窗口会显示详细的构建错误信息，包括编译错误和文件路径问题。
+
+#### 3. 检查“错误列表”窗口
+
+“错误列表”窗口会列出所有编译错误、警告和消息，有助于快速定位问题：
+
+- 打开“错误列表”窗口：点击 `视图 > 错误列表`，或使用快捷键 `Ctrl + \, E`。
+- 查找并修复错误：双击错误信息即可定位到具体的代码位置，修复后再尝试执行 `Add-Migration` 命令。
+
+#### 4. 手动构建项目
+
+在执行 `Add-Migration` 命令之前，可以尝试手动构建项目，以确保没有编译错误：
+
+- 构建项目：点击 `生成 > 生成解决方案`，或使用快捷键 `Ctrl + Shift + B`。
+- 查看并修复编译错误：修复所有错误后，再次尝试执行 `Add-Migration` 命令。
+
+#### 5. 使用命令行工具查看详细信息
+
+如果在 Visual Studio 中无法解决问题，可以尝试使用命令行工具：
+
+- 打开命令提示符或包管理控制台，导航到包含 `DbContext` 的项目文件夹。
+- 手动运行命令：`dotnet ef migrations add Add_Sex_To_User`，查看控制台中的详细错误信息。
+
+### 总结
+
+当你在 Entity Framework Core 中遇到 `Add-Migration` 失败的情况时，可以通过以上步骤查看详细的错误信息并进行修复。确保 NuGet 管理包的默认项目和启动项目设置正确，并通过 Visual Studio 的“输出”和“错误列表”窗口获取构建失败的具体原因。通过这些方法，你将能够更好地处理 EF Core 中的迁移问题，顺利生成数据库脚本。
+
+希望这篇文章能够帮助你解决在使用 Entity Framework Core 时遇到的迁移问题。如果有任何问题，欢迎留言讨论。
