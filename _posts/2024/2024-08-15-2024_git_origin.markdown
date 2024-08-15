@@ -1,0 +1,76 @@
+---
+layout: page
+title:   更新远程 Git 仓库地址及推送未提交的本地修改
+category: 技术
+tags: git
+---
+{% include JB/setup %}
+
+在日常开发过程中，远程 Git 仓库的地址有时会发生变化。当仓库地址变更时，我们可能仍有未推送的本地提交。为了确保这些本地修改顺利推送到新的远程仓库地址，我们需要做一些调整。在本文中，我将详细介绍如何处理这种情况。
+
+#### 场景背景
+
+假设当前我们有一个远程仓库，其地址为 `http://git.2pole.com:82`，但由于某些原因，服务器地址变更为了 `http://git.2pole.com:88`。此时，我们已经在本地进行了一些提交但尚未推送到服务器上。我们需要做的就是更新远程仓库地址，并将本地提交推送到新的远程仓库。
+
+#### 步骤 1：更新远程仓库地址
+
+1. **查看当前的远程仓库地址**
+
+   首先，我们需要查看当前配置的远程仓库地址，以确保我们要更新的地址正确：
+   ```bash
+   git remote -v
+   ```
+
+   此命令会列出所有已配置的远程仓库及其对应的 URL，例如：
+   ```
+   origin  http://git.2pole.com:82/your-repository-path.git (fetch)
+   origin  http://git.2pole.com:82/your-repository-path.git (push)
+   ```
+
+2. **更新远程仓库地址**
+
+   使用 `git remote set-url` 命令更新远程仓库的 URL：
+   ```bash
+   git remote set-url origin http://git.2pole.com:88/your-repository-path.git
+   ```
+
+   请确保将 `your-repository-path.git` 替换为实际的仓库路径。
+
+3. **确认远程仓库地址更新成功**
+
+   再次查看远程仓库地址，以确认更新成功：
+   ```bash
+   git remote -v
+   ```
+
+   输出应类似如下：
+   ```
+   origin  http://git.2pole.com:88/your-repository-path.git (fetch)
+   origin  http://git.2pole.com:88/your-repository-path.git (push)
+   ```
+
+#### 步骤 2：推送本地提交到新的远程仓库
+
+1. **检查本地提交**
+
+   在推送之前，我们可以使用 `git log` 命令来检查本地提交是否存在，确保我们要推送的提交准备就绪：
+   ```bash
+   git log --oneline
+   ```
+
+   此命令会列出你的提交历史。如果有未推送的提交，它们会列在这里。
+
+2. **推送到新的远程仓库**
+
+   使用以下命令将本地提交推送到新的远程仓库：
+   ```bash
+   git push origin your-branch-name
+   ```
+
+   请将 `your-branch-name` 替换为你当前的分支名称，例如 `master` 或 `main`。执行此命令后，Git 会将你的本地提交推送到新的远程仓库地址。
+
+#### 总结
+
+通过上述步骤，我们能够顺利地将远程仓库的 URL 更新为新的地址，同时将本地未提交的更改推送到新的远程仓库。这个流程非常适用于仓库地址更改的场景，并且对保持版本控制的连续性非常重要。
+
+希望这篇文章能帮助你在类似场景中应对 Git 仓库的变更。保持代码的有效同步始终是我们在团队协作中的核心操作之一。
