@@ -1,0 +1,78 @@
+---
+layout: page
+title:   SQL Server中使用CTE更新问卷分数的最佳实践
+category: 技术
+tags: sql
+---
+{% include JB/setup %}
+
+在数据库开发中，更新复杂的表数据时，经常需要通过连接多个表来计算并更新目标表中的字段。本文将讨论如何在 SQL Server 中使用公用表表达式（CTE）来计算并更新问卷分数，解决在更新时遇到的聚合函数问题。
+
+#### 问题描述
+
+假设我们有一个问卷系统，数据库包含以下几个关键表：
+
+1. `GdQuestionnaireFills`: 记录了用户填写问卷的情况。
+2. `GdQuestionnaireDistributions`: 记录了问卷的分发情况。
+3. `GdBackupQuestionnaires`: 记录了问卷的基本信息。
+4. `GdBackupQuestionnaireQuests`: 记录了问卷中的具体问题及其分数。
+
+我们希望根据分发的问卷，找到所有相关的问题，并计算这些问题的总分，然后将这个总分更新到 `GdQuestionnaireFills` 表的 `TotalQuestionScore` 字段中。
+
+#### 初步解决方案
+
+初学者可能会直接尝试编写以下 SQL 语句：
+
+```sql
+UPDATE dbo.GdQuestionnaireFills AS f
+JOIN dbo.GdQuestionnaireDistributions AS d ON f.DistributionId = d.Id
+JOIN dbo.GdBackupQuestionnaires AS q ON d.QuestionnaireId = q.Id
+JOIN dbo.GdBackupQuestionnaireQuests AS qu ON q.Id = qu.QuestionnaireId
+SET f.TotalQuestionScore = SUM(qu.Score);
+```
+
+然而，上述 SQL 语句存在一个明显的问题：在 `SET` 子句中使用了聚合函数 `SUM`，这是不被允许的。
+
+#### 使用CTE解决问题
+
+要解决这一问题，我们可以通过使用公用表表达式（CTE）来先计算总分，再执行更新操作。以下是改进后的 SQL 语句：
+
+```sql
+WITH TotalScores AS (
+    SELECT 
+        f.Id AS FillId,
+        SUM(qu.Score) AS TotalScore
+    FROM 
+        dbo.GdQuestionnaireFills f
+    JOIN 
+        dbo.GdQuestionnaireDistributions d ON f.DistributionId = d.Id
+    JOIN 
+        dbo.GdBackupQuestionnaires q ON d.QuestionnaireId = q.Id
+    JOIN 
+        dbo.GdBackupQuestionnaireQuests qu ON q.Id = qu.QuestionnaireId
+    GROUP BY 
+        f.Id
+)
+UPDATE 
+    f
+SET 
+    f.TotalQuestionScore = ts.TotalScore
+FROM 
+    dbo.GdQuestionnaireFills f
+JOIN 
+    TotalScores ts ON f.Id = ts.FillId;
+```
+
+### 代码解析
+
+1. **CTE的定义**: 
+   - 我们首先定义了一个名为 `TotalScores` 的CTE。这个CTE查询从 `GdQuestionnaireFills` 表开始，连接其他相关表，计算每个问卷填写记录的总分数。
+   - 通过 `GROUP BY f.Id`，我们确保每个 `GdQuestionnaireFills` 记录都计算出相应的总分数。
+
+2. **更新操作**: 
+   - 我们使用 `UPDATE` 语句，将 `TotalScores` CTE 产生的 `TotalScore` 更新到 `GdQuestionnaireFills` 表的 `TotalQuestionScore` 字段中。
+   - 通过将 `TotalScores` 与 `GdQuestionnaireFills` 表连接，确保我们只更新与CTE中对应的记录。
+
+### 总结
+
+通过使用 CTE，我们可以优雅地解决 SQL Server 中复杂更新操作中的聚合问题。这种方法不仅提高了代码的可读性，还能够有效避免在更新操作中直接使用聚合函数带来的错误。如果你在工作中遇到了类似的问题，不妨尝试使用 CTE 来简化你的 SQL 语句。
