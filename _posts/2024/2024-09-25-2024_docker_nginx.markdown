@@ -1,0 +1,134 @@
+---
+layout: page
+title:   使用 Docker 部署 Nginx 及外网访问问题排查
+category: 工具
+tags: docker
+---
+
+在使用 Docker 部署 Nginx 时，特别是在绑定多个端口并挂载配置文件的场景下，外网访问可能会遇到一些问题。本文将分享如何通过 Docker 部署 Nginx 并解决外网访问端口失败的情况。
+
+### 一、Docker 运行 Nginx 的基本命令
+
+以下是一个典型的 Nginx 容器启动命令：
+
+```bash
+docker run --name mynginx -p 80:80 -p 443:443 \
+-v /root/xdb/nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro \
+-v /root/xdb/nginx/config:/etc/nginx/conf.d \
+-v /root/xdb/nginx/tcpconfig:/etc/nginx/tcp.d \
+-v /root/xdb/nginx/ssl:/etc/nginx/ssl \
+-v /root/xdb/nginx/www:/usr/share/nginx/html \
+-d nginx
+```
+
+该命令将 Nginx 的 80 和 443 端口映射到宿主机，并挂载相应的配置文件和目录。
+
+### 二、外网无法访问特定端口问题排查
+
+#### 1. 问题现象
+
+我们配置了 Nginx 监听端口 38001 和 38004 用于不同的服务，但在尝试通过 IP + 端口访问时，发现外网无法连接到这两个端口。
+
+执行以下命令时，收到连接被拒绝的错误：
+
+```bash
+curl http://<your-ip>:38001
+curl: (7) Failed connect to <your-ip>:38001; Connection refused
+```
+
+#### 2. 排查步骤
+
+1. **检查 Nginx 配置**：首先确保 `nginx.conf` 中配置了正确的监听端口，并且语法正确。
+
+   ```bash
+   docker exec -it mynginx nginx -t
+   ```
+
+2. **确认端口映射**：查看容器的端口映射，确认 38001 和 38004 是否被正确映射。
+
+   ```bash
+   docker ps | grep mynginx
+   ```
+
+   在初始启动时，我们发现容器只映射了 80 和 443 端口，而没有映射 38001 和 38004。
+
+#### 3. 解决方案
+
+要让外网访问 Nginx 监听的 38001 和 38004 端口，必须将这两个端口暴露出来。可以通过以下命令重新启动容器，增加端口映射：
+
+```bash
+docker run --name mynginx -p 80:80 -p 443:443 \
+-p 38001:38001 -p 38004:38004 \
+-v /root/xdb/nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro \
+-v /root/xdb/nginx/config:/etc/nginx/conf.d \
+-v /root/xdb/nginx/tcpconfig:/etc/nginx/tcp.d \
+-v /root/xdb/nginx/ssl:/etc/nginx/ssl \
+-v /root/xdb/nginx/www:/usr/share/nginx/html \
+-d nginx
+```
+
+重新启动后，通过外网访问 `http://<your-ip>:38001` 和 `http://<your-ip>:38004` 时，问题解决。
+
+### 三、Vue 项目 Nginx 配置示例
+
+以下是一个典型的 Nginx 配置文件，用于发布 Vue 项目，分别监听 38001 和 38004 端口。
+
+```nginx
+server {
+  listen 38001;
+  server_name <your-ip>;
+  index index.html;
+  root /usr/share/nginx/html/vue_user/;
+
+  location / {
+    try_files $uri $uri/ @router;
+    index index.html;
+  }
+
+  location @router {
+    rewrite ^.*$ /index.html last;
+  }
+
+  location ~ .*\.(gif|jpg|jpeg|png|bmp|swf|ico)$ {
+    expires 30d;
+  }
+
+  location ~ .*\.(js|css)?$ {
+    expires 15d;
+  }
+
+  access_log off;
+}
+
+server {
+  listen 38004;
+  server_name <your-ip>;
+  index index.html;
+  root /usr/share/nginx/html/vue_console/;
+
+  location / {
+    try_files $uri $uri/ @router;
+    index index.html;
+  }
+
+  location @router {
+    rewrite ^.*$ /index.html last;
+  }
+
+  location ~ .*\.(gif|jpg|jpeg|png|bmp|swf|ico)$ {
+    expires 30d;
+  }
+
+  location ~ .*\.(js|css)?$ {
+    expires 15d;
+  }
+
+  access_log off;
+}
+```
+
+### 四、总结
+
+在使用 Docker 部署 Nginx 时，确保正确的端口映射非常关键。如果容器没有将需要的端口暴露给外网，即使 Nginx 配置正确，外网也无法访问这些服务。在启动容器时，使用 `-p` 参数暴露必要的端口，并通过日志和配置检查来排除潜在问题。
+
+通过这篇文章，您可以更好地掌握如何通过 Docker 部署 Nginx 并解决端口访问问题。希望对您的项目有所帮助！
