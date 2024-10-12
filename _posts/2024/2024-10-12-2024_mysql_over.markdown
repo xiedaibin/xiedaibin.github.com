@@ -1,0 +1,104 @@
+---
+layout: page
+title: 如何在 MySQL 中删除分组数据中多余的记录
+category: 技术
+tags: mysql
+---
+
+在日常数据库操作中，我们经常会遇到表中某些数据重复的情况。在本次案例中，我们有一个名为 `warehouse_StorageFeeConfigRelations` 的表，该表包含 `warehouseId` 和 `StorageFeeConfigId` 两列。由于某些原因，每个 `warehouseId` 和 `StorageFeeConfigId` 的组合可能会出现多条记录，我们需要删除这些多余的记录，只保留每组中的一条。
+
+下面我们将详细介绍如何在 MySQL 中使用 `ROW_NUMBER()` 窗口函数配合 `DELETE` 语句来解决这一问题。
+
+#### 问题描述
+
+首先，我们想要查询哪些 `warehouseId` 和 `StorageFeeConfigId` 组合存在多余的记录：
+
+```sql
+SELECT warehouseId, StorageFeeConfigId, COUNT(*) AS TotalCount 
+FROM warehouse_StorageFeeConfigRelations  
+WHERE IsDeleted = 0
+GROUP BY warehouseId, StorageFeeConfigId 
+HAVING TotalCount > 1;
+```
+
+查询结果显示每组 `warehouseId` 和 `StorageFeeConfigId` 中存在重复记录的条数。我们的目标是删除这些多余的记录，仅保留每个组合中的一条记录。
+
+#### 解决思路
+
+在 MySQL 中，我们可以使用 `ROW_NUMBER()` 窗口函数为每个分组生成一个行号，之后可以根据行号删除多余的记录。具体的思路如下：
+
+1. 使用 `ROW_NUMBER()` 为每个 `warehouseId` 和 `StorageFeeConfigId` 分组的行进行编号。
+2. 只保留每组中编号为 1 的记录，删除其他编号大于 1 的记录。
+
+#### 实现步骤
+
+首先，我们可以通过以下查询为每组 `warehouseId` 和 `StorageFeeConfigId` 生成行号：
+
+```sql
+SELECT Id, warehouseId, StorageFeeConfigId,
+       ROW_NUMBER() OVER (PARTITION BY warehouseId, StorageFeeConfigId ORDER BY Id) AS rn
+FROM warehouse_StorageFeeConfigRelations
+WHERE IsDeleted = 0;
+```
+
+在这个查询中：
+- `ROW_NUMBER()` 函数根据 `warehouseId` 和 `StorageFeeConfigId` 进行分组，并为每组中的记录按 `Id` 进行排序后生成一个行号。
+- `PARTITION BY` 子句用于分组，`ORDER BY` 子句用于决定分组内行号的顺序。
+
+我们想要删除行号大于 1 的记录，也就是每组中除了第一条之外的记录。
+
+#### 删除多余记录
+
+接下来，我们将这段查询嵌入到 `DELETE` 语句中，以删除多余的记录。完整的删除语句如下：
+
+```sql
+DELETE FROM warehouse_StorageFeeConfigRelations
+WHERE Id IN (
+    SELECT Id FROM (
+        SELECT Id, ROW_NUMBER() OVER (PARTITION BY warehouseId, StorageFeeConfigId ORDER BY Id) AS rn
+        FROM warehouse_StorageFeeConfigRelations
+        WHERE IsDeleted = 0
+    ) AS t
+    WHERE rn > 1
+);
+```
+
+#### 解释：
+
+- **子查询**：`ROW_NUMBER()` 函数为每个 `warehouseId` 和 `StorageFeeConfigId` 组合生成一个行号，按 `Id` 升序排列。
+- **外层查询**：我们从生成的行号中筛选出 `rn > 1` 的记录，这些记录是我们希望删除的多余数据。
+- **删除操作**：通过 `DELETE` 语句删除多余的记录，只保留每组中的一条记录。
+
+#### 总结
+
+通过这种方法，我们可以轻松地删除 MySQL 表中分组数据的多余记录。在这个案例中，我们利用了 MySQL 的窗口函数 `ROW_NUMBER()`，它为每个分组生成了行号，并结合 `DELETE` 语句删除了多余的记录。这种方法不仅简单明了，而且性能较好，特别适合处理需要删除分组中重复记录的情况。
+
+希望这篇文章能帮助你理解如何在 MySQL 中删除分组中的重复数据。如果你在实际操作中遇到类似问题，可以尝试这种方法来优化数据库表中的数据。
+
+---
+
+**代码示例总结**：
+
+- 查询重复数据：
+```sql
+SELECT warehouseId, StorageFeeConfigId, COUNT(*) AS TotalCount 
+FROM warehouse_StorageFeeConfigRelations  
+WHERE IsDeleted = 0
+GROUP BY warehouseId, StorageFeeConfigId 
+HAVING TotalCount > 1;
+```
+
+- 删除每组多余的数据，只保留一条：
+```sql
+DELETE FROM warehouse_StorageFeeConfigRelations
+WHERE Id IN (
+    SELECT Id FROM (
+        SELECT Id, ROW_NUMBER() OVER (PARTITION BY warehouseId, StorageFeeConfigId ORDER BY Id) AS rn
+        FROM warehouse_StorageFeeConfigRelations
+        WHERE IsDeleted = 0
+    ) AS t
+    WHERE rn > 1
+);
+```
+
+通过这种方式，你可以保持数据库中数据的简洁性和准确性，避免因重复记录带来的问题。
