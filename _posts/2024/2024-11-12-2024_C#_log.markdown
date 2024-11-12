@@ -33,7 +33,7 @@ logger.Info("Logon by user:{0} from ip_address:{1}", "Kenny", "127.0.0.1");
 ### 消息模板的优势
 
 消息模板（Message Templates）是一种支持结构化日志的规范，允许开发者使用易读的方式来记录日志，同时也便于日志系统提取数据。通过使用占位符（参数名称），日志模板可以捕获特定的日志字段，既便于开发者阅读，也便于程序高效解析。
-![alt text](../../images/article/20241112-12323.png)
+![alt text](/images/article/20241112-12323.png)
 以下是一个消息模板的示例：
 
 ```csharp
