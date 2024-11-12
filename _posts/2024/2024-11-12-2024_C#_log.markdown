@@ -1,0 +1,83 @@
+---
+layout: page
+title: .net core Logger与结构化日志
+category: 技术
+tags: 技术
+---
+
+### 简介
+
+结构化日志，也称为语义化日志，是一种改进日志记录的方式，具有以下两个主要优势：
+
+1. **便于查询**：结构化日志为数据提供固定格式，使下游的日志记录工具可以轻松读取、解析和处理这些数据，而不必依赖复杂的正则表达式解析非结构化字符串。
+2. **方便分析**：在系统广泛使用或运行时间较长后，日志的数量会急剧增加。结构化日志便于对这些日志进行高效查询和深入分析，为系统运行和问题定位提供数据支持。
+
+在 .NET 中，常用的结构化日志组件包括 **NLog** 和 **Serilog**。通过使用这些组件，可以有效地将日志从文本记录转化为结构化数据，使日志的管理和分析更加智能和灵活。
+
+### 非结构化日志的局限
+
+传统的非结构化日志记录方式简单且对开发者友好。例如，开发者可以通过以下代码记录用户的登录信息：
+
+```csharp
+logger.Info("Logon by user:{0} from ip_address:{1}", "Kenny", "127.0.0.1");
+```
+
+这条日志可能会生成以下格式的记录：
+
+```
+2018-12-22 16:29:29.2793|Info|Logon by user:Kenny from ip_address:127.0.0.1
+```
+
+从人类的角度来看，这样的日志内容清晰明了。但对于程序而言，要从大量日志中提取特定用户的登录信息，需要逐行解析字符串，不仅效率低，而且对查询复杂数据的支持不友好。这种方式不利于在数据量大的情况下进行实时的日志分析。
+
+### 消息模板的优势
+
+消息模板（Message Templates）是一种支持结构化日志的规范，允许开发者使用易读的方式来记录日志，同时也便于日志系统提取数据。通过使用占位符（参数名称），日志模板可以捕获特定的日志字段，既便于开发者阅读，也便于程序高效解析。
+![alt text](../../images/article/20241112-12323.png)
+以下是一个消息模板的示例：
+
+```csharp
+[HttpGet("{id}")]
+public async Task<ActionResult<TodoItemDTO>> GetTodoItem(long id)
+{
+    _logger.LogInformation(MyLogEvents.GetItem, "Getting item {Id}", id);
+
+    var todoItem = await _context.TodoItems.FindAsync(id);
+
+    if (todoItem == null)
+    {
+        _logger.LogWarning(MyLogEvents.GetItemNotFound, "Get({Id}) NOT FOUND", id);
+        return NotFound();
+    }
+
+    return ItemToDTO(todoItem);
+}
+```
+
+在上述示例中，`{Id}` 占位符用于标记特定的参数名称，使日志信息在生成时将 `id` 参数值嵌入到日志中。使用这种模板可以提高日志查询的效率，尤其是在需要搜索特定参数的日志时。
+
+### 参数顺序与占位符名称
+
+在消息模板中，参数顺序影响占位符的值填充。尽管可以灵活指定占位符名称，但参数的顺序仍需要与日志内容的记录顺序匹配。例如：
+
+```csharp
+string apples = "1";
+string pears = "2";
+string bananas = "3";
+
+_logger.LogInformation("Parameters: {pears}, {bananas}, {apples}", apples, pears, bananas);
+```
+
+在这里，尽管占位符名称与参数名称不一致，但由于结构化日志的特性，日志系统仍然能够有效地将参数值存储为独立的字段。这样，即便日志内容格式不同，日志工具仍可解析出各参数的具体值，从而实现灵活的日志管理。
+
+例如，通过以下方法记录的日志，既包含 `Id` 参数，又可标记请求的时间 `RequestTime`：
+
+```csharp
+_logger.LogInformation("Getting item {Id} at {RequestTime}", id, DateTime.Now);
+```
+
+### 附录：.NET 中的日志记录资源
+
+在 .NET 中，结构化日志可以帮助开发者提升日志的利用价值，从而提高系统维护和问题追踪的效率。更多关于 .NET 中日志记录的内容可以参考相关资源：
+- [.NET 中的日志记录](https://docs.microsoft.com/zh-cn/dotnet/core/extensions/logging?tabs=command-line#log-message-template)
+- [.NET Core开发日志--结构化日志 - Ken.W - 博客园](https://www.cnblogs.com/kenwoo/p/9906185.html)
