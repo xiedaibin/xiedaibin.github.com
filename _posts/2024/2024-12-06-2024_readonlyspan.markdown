@@ -1,6 +1,6 @@
 ---
 layout: page
-title: `ReadOnlySpan<char>` 和 `string` 有什么区别
+title: ReadOnlySpan<char>和string有什么区别
 category: 技术
 tags: C#
 ---
