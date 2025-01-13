@@ -1,0 +1,91 @@
+---
+layout: page
+title: CommonJS (CJS) 和原生 ECMAScript 模块 (ESM) 的区别与联系
+category: 技术
+tags: js
+---
+
+
+JavaScript 模块化系统主要有两种标准：**CommonJS (CJS)** 和 **ECMAScript 模块 (ESM)**。以下是它们的详细对比和总结：
+
+---
+
+#### **区别**
+
+##### 1. **语法和定义方式**
+- **CJS**  
+  使用 `module.exports` 导出模块内容，使用 `require()` 导入模块。例如：
+
+  ```javascript
+  // 导出
+  module.exports = {
+    sayHello: function () {
+      console.log('Hello!');
+    },
+  };
+
+  // 导入
+  const myModule = require('./myModule');
+  myModule.sayHello();
+  ```
+
+- **ESM**  
+  使用 `export` 和 `import` 关键字：
+
+  ```javascript
+  // 导出
+  export function sayHello() {
+    console.log('Hello!');
+  }
+
+  // 导入
+  import { sayHello } from './myModule.js';
+  sayHello();
+  ```
+
+##### 2. **执行时机**
+- **CJS**  
+  模块内容是**同步加载**的，`require()` 会在代码执行到该行时立即执行并返回模块内容。
+
+- **ESM**  
+  模块的解析和加载是**异步**的。模块内容在实际需要时才会被执行，这有助于提高加载性能，特别是在浏览器环境中。
+
+##### 3. **模块解析和路径**
+- **CJS**  
+  - 默认情况下，路径解析基于当前工作目录。
+  - `.js` 扩展名是可选的。
+
+- **ESM**  
+  - 路径必须明确指出文件类型（如 `.js` 或 `.mjs`）。
+  - 在 Node.js 中，ESM 模块的解析规则可能与 CJS 不同，尤其是在处理相对路径和包时。
+
+##### 4. **顶级作用域**
+- **CJS**  
+  模块内容被封装在一个函数闭包中，每个模块有自己的作用域。
+
+- **ESM**  
+  模块运行在真正的顶级作用域中，这使得某些功能（如顶级 `await`）成为可能，而在 CJS 中不行。
+
+---
+
+#### **联系**
+
+##### 1. **互操作性**
+- 现代 Node.js 提供了机制（例如 `--experimental-specifier-resolution=node` 标志）以允许 CJS 和 ESM 模块互相导入导出，尽管这可能需要特定的配置。
+- 工具（如 Babel、Webpack）可以将 ESM 代码转换为 CJS，或提供兼容性层。
+
+##### 2. **模块系统的演进**
+- **ESM** 是 ECMAScript 标准的一部分，是 JavaScript 模块系统的未来方向。
+- **CJS** 最初为服务器端设计，而 **ESM** 同时考虑了浏览器和服务器的需求。
+
+##### 3. **生态系统**
+- 许多流行的库和框架已经开始提供 **ESM** 版本。
+- 尽管如此，**CJS** 仍然在现有项目和旧版 Node.js 环境中广泛使用。
+
+---
+
+#### **总结**
+
+1. **CJS 和 ESM 的显著区别**体现在语法、执行机制、路径解析和作用域上。
+2. **ESM 是未来的趋势**，逐渐取代 CJS，但短期内 **CJS** 仍会广泛使用。
+3. 在现代 JavaScript 开发中，CJS 和 ESM **共存**是常见现象，开发者可以根据项目需求选择适合的模块系统。
