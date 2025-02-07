@@ -1,0 +1,76 @@
+---
+layout: page
+title: Kubernetes 中如何清理 READY 状态为 0 的 Pod
+category: 技术
+tags: k8s
+---
+
+在 Kubernetes 集群中，Pod 作为最小的部署单元，应该处于 **READY** 状态才能正常运行。然而，有时某些 Pod 的 **READY** 状态为 0，表示其中的容器未准备就绪，可能导致应用不可用。  
+
+#### **为什么需要清理这些 Pod？**  
+长时间处于 READY 状态为 0 的 Pod 可能由于以下原因导致：  
+
+- **应用错误或配置问题**，容器无法启动  
+- **资源不足**，导致 Pod 运行失败  
+- **依赖服务不可用**，导致 Pod 处于异常状态  
+
+清理这些 Pod 有助于：  
+
+- **释放资源**，避免浪费  
+- **触发控制器重新调度**，可能自动修复问题  
+- **辅助诊断和修复问题**  
+
+---
+
+#### **如何清理 READY 状态为 0 的 Pod？**  
+
+##### **1. 列出所有 READY 状态为 0 的 Pod**  
+使用 `kubectl` 结合 `jq` 过滤出所有未就绪的 Pod：  
+
+```bash
+kubectl get pods --all-namespaces -o json | jq -r '.items[] | select(.status.containerStatuses[]?.ready == false) | "\(.metadata.namespace)/\(.metadata.name)"'
+```
+该命令返回 **namespace/pod-name** 格式的 Pod 列表。  
+
+##### **2. 删除这些 Pod**  
+可手动删除，也可以使用以下 **Bash 脚本** 自动清理所有 READY 状态为 0 的 Pod：  
+
+```bash
+#!/bin/bash
+kubectl get pods --all-namespaces -o json | jq -r '.items[] | select(.status.containerStatuses[]?.ready == false) | "\(.metadata.namespace)/\(.metadata.name)"' | while IFS= read -r line; do
+  namespace=$(echo $line | cut -d'/' -f1)
+  pod_name=$(echo $line | cut -d'/' -f2)
+  kubectl delete pod "$pod_name" -n "$namespace"
+done
+```
+**注意：** 需要安装 `jq`，可按以下方式安装：  
+
+- **Debian/Ubuntu**: `sudo apt-get install jq`  
+- **CentOS/RHEL**: `sudo yum install jq`  
+- **Arch Linux**: `sudo pacman -S jq`  
+
+##### **3. 仅清理特定命名空间的 Pod**  
+如果只想清理 **default** 命名空间中的 Pod，可使用：  
+
+```bash
+#!/bin/bash
+kubectl get pods -n default -o json | jq -r '.items[] | select(.status.containerStatuses[]?.ready == false) | .metadata.name' | while IFS= read -r pod_name; do
+  kubectl delete pod "$pod_name" -n default
+done
+```
+
+---
+
+#### **注意事项**
+1. **Pod 可能会被重新创建**：如果 Pod 由 Deployment 等控制器管理，删除后可能会自动重建。  
+2. **确保有足够资源**：防止因资源不足导致新 Pod 仍然无法启动。  
+3. **建议先查看日志**：在删除 Pod 之前，可以使用以下命令查看其状态和日志，避免误删：  
+   ```bash
+   kubectl describe pod <pod-name> -n <namespace>
+   kubectl logs <pod-name> -n <namespace>
+   ```
+
+---
+
+### **结论**
+定期清理 READY 状态为 0 的 Pod 可以提高 Kubernetes 集群的健康性和资源利用率，但在生产环境中请务必谨慎操作，确保理解每个步骤的影响。  
