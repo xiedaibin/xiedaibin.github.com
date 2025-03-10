@@ -1,0 +1,72 @@
+---
+layout: page
+title: 解决 CentOS 7 yum 更新失败：使用第三方镜像源
+category: 技术
+tags: linux
+---
+
+# 如何解决 CentOS 7 yum 更新失败：使用第三方镜像源
+
+## 问题背景
+
+最近在运行 `sudo yum update` 时，可能会遇到如下错误信息：
+
+```
+Could not retrieve mirrorlist http://mirrorlist.centos.org/?release=7&arch=x86_64&repo=os&infra=stock error was
+14: curl#6 - "Could not resolve host: mirrorlist.centos.org; 未知的错误"
+Cannot find a valid baseurl for repo: base/7/x86_64
+```
+
+这是因为 CentOS 7 已于 2024 年 6 月 30 日正式停止官方支持，导致官方镜像源（如 `mirrorlist.centos.org`）不可用。为了解决这个问题，可以使用国内的第三方镜像源，如阿里云或清华大学镜像源。
+
+## 解决步骤
+
+以下是使用第三方镜像源恢复 `yum` 正常工作的详细步骤。
+
+### 1. 备份原有配置文件
+
+在修改任何配置文件之前，先进行备份，以便在出错时快速回滚：
+
+```bash
+sudo cp /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.bak
+```
+
+### 2. 下载第三方镜像源配置文件
+
+推荐使用以下国内镜像源：
+
+#### 阿里云镜像源
+
+```bash
+sudo wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
+```
+
+#### 清华大学镜像源
+
+```bash
+sudo wget -O /etc/yum.repos.d/CentOS-Base.repo https://mirrors.tuna.tsinghua.edu.cn/repo/CentOS-7.repo
+```
+
+执行上述任一命令后，将会下载并覆盖原有的 `CentOS-Base.repo` 文件，使 `yum` 指向新的镜像源。
+
+### 3. 清理缓存并更新
+
+替换 `yum` 源配置文件后，需要清理旧缓存并重新生成缓存：
+
+```bash
+sudo yum clean all
+sudo yum makecache
+```
+
+然后尝试更新系统：
+
+```bash
+sudo yum update
+```
+
+如果一切顺利，`yum` 将正常下载软件包，问题解决！
+
+## 小贴士
+
+- 第三方镜像源的内容基于 CentOS 7 的最后一个版本（7.9.2009），无法提供新功能或安全更新，因此仅适合作为临时方案。
+- 长期来看，建议迁移到仍在维护的系统，如 **Rocky Linux** 或 **AlmaLinux**。

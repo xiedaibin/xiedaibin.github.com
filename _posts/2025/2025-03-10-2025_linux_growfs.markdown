@@ -1,0 +1,125 @@
+---
+layout: page
+title: LVM（逻辑卷管理）重新分配磁盘空间
+category: 技术
+tags: linux
+---
+
+在 CentOS 系统中，如果 /home 分区占用较多空间，而根分区（/）空间不足，我们可以使用 LVM（逻辑卷管理）重新分配磁盘空间。本文介绍如何将 /home 的空间重新分配给根分区（/）。
+
+## 前提条件
+
+1. **备份数据**：调整分区大小涉及数据移动，存在风险。请确保备份重要数据。
+2. **以 root 权限操作**：需要使用 `sudo` 或直接以 `root` 用户执行命令。
+3. **检查 LVM 配置**：确认 `/home` 和 `/` 在同一个卷组（VG）中。
+
+## 具体步骤
+
+### 1. 检查 LVM 配置
+
+运行以下命令，查看卷组（VG）和逻辑卷（LV）的详细信息：
+
+```bash
+vgdisplay
+lvdisplay
+```
+
+查找 `/dev/mapper/centos-root` 和 `/dev/mapper/centos-home`，确认它们属于同一个卷组（如 `centos`）。
+
+### 2. 卸载并删除 /home 分区（可选）
+
+如果想将 /home 的空间合并到 /，可以先迁移数据，然后删除 /home 逻辑卷。
+
+#### a. 迁移 /home 数据
+
+```bash
+mkdir /home_backup
+cp -a /home/* /home_backup/
+```
+
+#### b. 卸载 /home
+
+```bash
+umount /home
+```
+
+如果提示设备忙，可能需要终止使用 `/home` 的进程，或进入单用户模式执行操作。
+
+#### c. 删除 /home 逻辑卷
+
+```bash
+lvremove /dev/mapper/centos-home
+```
+
+输入 `y` 确认删除，这将释放 `/home` 占用的空间到卷组中。
+
+### 3. 扩展根分区（/）
+
+#### a. 检查卷组可用空间
+
+```bash
+vgdisplay
+```
+
+在输出中查找 `Free PE / Size`，确认有足够的空闲空间。
+
+#### b. 扩展根分区逻辑卷
+
+```bash
+lvextend -l +100%FREE /dev/mapper/centos-root
+```
+
+这样会使用所有释放的空间。如果只想分配部分空间（如 100G），可以改成 `-L +100G`。
+
+#### c. 调整根分区文件系统大小
+
+如果根分区使用的是 XFS 文件系统（CentOS 默认）：
+
+```bash
+xfs_growfs /
+```
+
+如果是 ext4 文件系统，则运行：
+
+```bash
+resize2fs /dev/mapper/centos-root
+```
+
+### 4. 验证结果
+
+运行以下命令检查分区大小：
+
+```bash
+df -h
+```
+
+根分区 `/` 的容量应增加。
+
+### 5. 处理 /home 挂载点（可选）
+
+如果 `/home` 逻辑卷已删除，/home 现在只是一个普通目录。可将数据移回：
+
+```bash
+mv /home_backup/* /home/
+rmdir /home_backup
+```
+
+然后编辑 `/etc/fstab`，删除或注释掉 `/home` 的挂载项：
+
+```bash
+vi /etc/fstab
+```
+
+找到类似 `/dev/mapper/centos-home` 的行，删除或用 `#` 注释掉。
+
+## 注意事项
+
+1. **单用户模式**：如果无法卸载 `/home`，可以重启到单用户模式进行操作。
+   ```bash
+   systemctl reboot
+   ```
+   在 GRUB 菜单按 `e`，添加 `single` 到内核参数，然后按 `F10` 启动。
+2. **文件系统类型**：CentOS 默认使用 XFS，若使用 ext4，部分命令略有不同，可用 `df -T` 检查文件系统类型。
+
+通过以上步骤，你可以成功调整 LVM 逻辑卷，将 `/home` 的空间重新分配给根分区 `/`，以优化磁盘利用率。
+
