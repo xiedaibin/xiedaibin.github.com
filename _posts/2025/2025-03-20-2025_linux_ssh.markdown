@@ -10,7 +10,7 @@ tags: ssh
 你可以在 SSH 命令中添加 `-o StrictHostKeyChecking=no` 选项，使 SSH 在首次连接时自动接受主机密钥并将其添加到 `known_hosts` 文件中。例如：
 
 ```bash
-ssh -o StrictHostKeyChecking=no user@114.55.90.72
+ssh -o StrictHostKeyChecking=no user@114.55.90.79
 ```
 
 **注意**：
@@ -23,7 +23,7 @@ ssh -o StrictHostKeyChecking=no user@114.55.90.72
 如果你希望在安全性和便利性之间取得平衡，可以手动获取主机的公钥并将其添加到 `known_hosts` 文件中：
 
 ```bash
-ssh-keyscan -t ecdsa 114.55.90.72 >> ~/.ssh/known_hosts
+ssh-keyscan -t ecdsa 114.55.90.79 >> ~/.ssh/known_hosts
 ```
 
 执行后，SSH 连接时将不会再提示确认主机密钥。
@@ -39,7 +39,7 @@ ssh-keyscan -t ecdsa 114.55.90.72 >> ~/.ssh/known_hosts
    ```
 2. 添加以下内容：
    ```ini
-   Host 114.55.90.72
+   Host 114.55.90.79
        HostKeyAlgorithms ecdsa-sha2-nistp256
        StrictHostKeyChecking no
        UserKnownHostsFile=/dev/null

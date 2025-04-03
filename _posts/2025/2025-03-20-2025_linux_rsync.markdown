@@ -22,7 +22,7 @@ ssh-keygen -t rsa -b 4096
 使用 `ssh-copy-id` 将公钥添加到目标服务器：
 
 ```bash
-ssh-copy-id root@114.55.90.72
+ssh-copy-id root@114.55.90.79
 ```
 
 你需要输入 **一次** `root` 用户的密码，之后公钥会被自动添加到远程服务器的 `~/.ssh/authorized_keys` 文件中。
@@ -31,7 +31,7 @@ ssh-copy-id root@114.55.90.72
 执行以下命令测试是否可以无密码登录：
 
 ```bash
-ssh root@114.55.90.72
+ssh root@114.55.90.79
 ```
 
 如果配置成功，你应该无需输入密码就能直接登录到远程服务器。
@@ -40,7 +40,7 @@ ssh root@114.55.90.72
 配置完成后，再次执行 `rsync` 命令，例如：
 
 ```bash
-rsync -avz /local/path root@114.55.90.72:/remote/path
+rsync -avz /local/path root@114.55.90.79:/remote/path
 ```
 
 这次应该不会再提示输入密码。
@@ -63,7 +63,7 @@ rsync -avz /local/path root@114.55.90.72:/remote/path
 - 在 `rsync` 命令中添加 `--timeout` 参数，例如：
 
   ```bash
-  rsync -avz --timeout=300 /local/path root@114.55.90.72:/remote/path
+  rsync -avz --timeout=300 /local/path root@114.55.90.79:/remote/path
   ```
 
   这表示设置 **300 秒超时**，防止因网络波动导致传输中断。
@@ -78,7 +78,7 @@ rsync -avz /local/path root@114.55.90.72:/remote/path
 `sshpass` 允许在命令行中直接输入密码（需安装 `sshpass` 工具）：
 
 ```bash
-sshpass -p "your_password" rsync -avz /local/path root@114.55.90.72:/remote/path
+sshpass -p "your_password" rsync -avz /local/path root@114.55.90.79:/remote/path
 ```
 
 ⚠ **风险警告**：
