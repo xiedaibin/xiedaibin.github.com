@@ -1,0 +1,98 @@
+---
+layout: page
+title: 为什么 .NET 的 `List<string>.Sort()` 在不同机器上结果不同？
+category: 技术
+tags: dotnet
+---
+
+
+在日常开发中，我们经常会使用 `.NET` 提供的集合排序方法，例如 `List<string>.Sort()`。然而你是否遇到过这样一个现象：**在不同的机器或操作系统上运行同样的代码，`Sort()` 的排序结果却不一样**？
+
+本文将深入分析这个现象的根本原因，并给出可靠的解决方案，确保你的排序逻辑在任何环境下都能保持一致。
+
+---
+
+## 复现问题
+
+以下是一个简单的字符串列表排序代码：
+
+```csharp
+var newList = new List<string> { softSn, cpuHash, driveHash, "SECURITY", "AAA", "JJJ" };
+newList.Sort();
+```
+
+在多台机器上运行这段代码，排序结果竟然不同，有的结果是：
+
+```
+AAA, JJJ, SECURITY, cpuHash, driveHash, softSn
+```
+
+而有的机器却是：
+
+```
+SECURITY, AAA, JJJ, cpuHash, driveHash, softSn
+```
+
+为什么会这样？
+
+---
+
+## 原因分析：默认排序依赖 `CultureInfo`
+
+`.NET` 中 `List<string>.Sort()` 方法实际上调用了 **基于当前线程文化信息（CultureInfo.CurrentCulture）的排序逻辑**。不同操作系统或用户环境的默认语言设置不同，因此字符串排序的规则也可能不同。
+
+例如：
+
+- 中文系统默认 `zh-CN`，可能对大写、小写、拼音顺序有特殊处理；
+- 英文系统默认 `en-US`，排序可能更接近 Unicode 编码顺序；
+- 土耳其语（`tr-TR`）甚至会把 `i` 和 `I` 看作完全不同的字符。
+
+这就是为什么同样的代码在不同机器上执行后排序结果不一致的根本原因。
+
+---
+
+## 如何查看当前 Culture 设置？
+
+你可以使用以下代码来检查你的运行环境：
+
+```csharp
+using System.Globalization;
+using System.Threading;
+
+Console.WriteLine("CurrentCulture: " + Thread.CurrentThread.CurrentCulture.Name);
+Console.WriteLine("CurrentUICulture: " + Thread.CurrentThread.CurrentUICulture.Name);
+```
+
+---
+
+## 解决方案：使用显式的比较器
+
+要想让排序结果在所有机器上一致，关键是不要依赖默认的文化排序，而是使用明确的排序逻辑：
+
+### 推荐做法：使用 `StringComparer.Ordinal`
+
+```csharp
+var newList = new List<string> { softSn, cpuHash, driveHash, "SECURITY", "AAA", "JJJ" };
+newList.Sort(StringComparer.Ordinal); // 使用 Unicode 编码排序，跨平台一致
+```
+
+---
+
+## 可选比较器介绍
+
+| 比较器                          | 说明 |
+|------------------------------|------|
+| `StringComparer.Ordinal`     | 基于 Unicode 编码顺序，区分大小写，结果一致性最好 |
+| `StringComparer.OrdinalIgnoreCase` | 忽略大小写的 Unicode 编码顺序 |
+| `StringComparer.InvariantCulture` | 使用固定不变的文化（通常基于 en-US），适合格式化但不完全保证排序一致性 |
+| `StringComparer.CurrentCulture`   | 默认行为，受操作系统或线程设置影响，排序不稳定 |
+
+---
+
+## 总结
+
+在多语言、多平台环境下编写健壮的字符串排序逻辑时，务必记住：
+
+> **不要依赖默认的 `Sort()`，始终显式指定字符串比较器。**
+
+建议统一使用 `StringComparer.Ordinal` 来确保跨平台行为一致，避免在不同系统之间出现意料之外的排序差异。
