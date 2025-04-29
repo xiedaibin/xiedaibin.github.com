@@ -1,0 +1,129 @@
+---
+layout: page
+title: C# 中 Stopwatch 精度测试与 Thread.Sleep 的陷阱
+category: 技术
+tags: dotnet
+---
+
+在日常开发中，我们经常使用 `Stopwatch` 来测量代码执行的耗时。然而，在实际测试中，我们可能会遇到一些奇怪的现象，比如我最近遇到的一次实验，结果如下：
+
+```csharp
+void Main()
+{
+    var watch = new Stopwatch();
+    watch.Start();
+    
+    var watch2 = new Stopwatch();
+    watch2.Start();
+    
+    Thread.Sleep(5);
+    
+    watch2.Stop();
+    watch2.ElapsedMilliseconds.Dump();
+    
+    watch.Stop();
+    watch.ElapsedMilliseconds.Dump();
+    
+    var dateime = DateTime.Now;
+    Thread.Sleep(5);
+    var dateime2= DateTime.Now;
+    (dateime2 - dateime).TotalMilliseconds.Dump();
+}
+```
+
+实验多次执行，输出结果大致如下：
+
+```
+11
+11
+15.6321
+```
+或者
+```
+7
+8
+15.9644
+```
+
+本来希望 `Thread.Sleep(5)` 只暂停5毫秒，结果 `Stopwatch` 测到的时间却是 7ms、11ms、甚至更高。这是什么原因呢？经过深入研究，我总结了以下几点原因和结论。
+
+---
+
+## 1. `Thread.Sleep` 的不确定性
+
+`Thread.Sleep(5)` 的本意是让线程暂停5毫秒，但实际上，`Sleep` 只是**“至少等待指定时间”**，不会保证精准的5ms。操作系统的调度粒度（通常在 Windows 上是 **15-16ms** 左右）会严重影响短时间休眠的实际效果。
+
+因此，`Thread.Sleep(5)` 很有可能实际睡眠时间远大于5ms，比如10ms、15ms，甚至更多。
+
+---
+
+## 2. `Stopwatch` 的高精度
+
+`Stopwatch` 在 .NET 中底层依赖 `QueryPerformanceCounter` 这样的高精度定时器，它本身是非常准确的。测量偏差主要来源于系统调度，而不是 Stopwatch 本身。
+
+所以，**Stopwatch 是可靠的，问题在于 Sleep 不可靠。**
+
+---
+
+## 3. `DateTime.Now` 精度较低
+
+`DateTime.Now` 受到系统时钟刷新频率的限制，精度大概在 15-16ms。即使你准确等待了5ms，`(dateime2 - dateime).TotalMilliseconds` 依然可能表现得很不准确。
+
+如果需要高精度的时间测量，应该优先使用 `Stopwatch`，而不是 `DateTime.Now`。
+
+---
+
+## 4. 改进方法 —— 使用 BusyWait 替代 Sleep
+
+为了实现更高精度的测试，我们可以用 `BusyWait`（忙等）代替 `Thread.Sleep`，代码如下：
+
+```csharp
+void Main()
+{
+    var watch = new Stopwatch();
+    watch.Start();
+
+    var watch2 = new Stopwatch();
+    watch2.Start();
+
+    BusyWait(5); // 精确等待约5毫秒
+
+    watch2.Stop();
+    watch2.ElapsedMilliseconds.Dump();
+
+    watch.Stop();
+    watch.ElapsedMilliseconds.Dump();
+
+    var dateime = DateTime.Now;
+    BusyWait(5);
+    var dateime2 = DateTime.Now;
+    (dateime2 - dateime).TotalMilliseconds.Dump();
+}
+
+// 用高精度 Stopwatch 忙等指定毫秒数
+void BusyWait(double milliseconds)
+{
+    var sw = Stopwatch.StartNew();
+    while (sw.Elapsed.TotalMilliseconds < milliseconds)
+    {
+        // 忙等，什么也不做
+    }
+}
+```
+
+### BusyWait 的优缺点
+- **优点**：等待时间更精准，不受系统线程调度影响。
+- **缺点**：期间会持续占用 CPU 资源，不适合在正式生产代码中频繁使用。
+
+---
+
+## 5. 总结
+
+| 项目 | 影响因素 | 说明 |
+|:---|:---|:---|
+| `Stopwatch` | 非常精准 | 推荐用于高精度测量 |
+| `Thread.Sleep` | 受操作系统调度粒度影响 | 小延迟不准确，不适合精确控制 |
+| `DateTime.Now` | 粗粒度（约15ms） | 适合一般场景，不适合高精度测量 |
+| 系统调度 | 线程切换、CPU功耗管理等 | 会引起额外延迟和抖动 |
+
+如果要精准测量少于20ms的短时间延迟，请避免直接使用 `Thread.Sleep`，可以考虑使用 `BusyWait`，并使用 `Stopwatch` 进行精确计时。
