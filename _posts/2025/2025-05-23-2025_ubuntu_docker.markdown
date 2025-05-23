@@ -1,0 +1,135 @@
+---
+layout: page
+title: 国内 Ubuntu 24.04 环境下快速安装 Docker
+category: 技术
+tags: docker
+---
+
+在国内环境中直接使用 Docker 官方源经常会遇到连接缓慢或失败的问题，因此本文将介绍如何在 **Ubuntu 24.04** 上通过 **国内镜像源** 快速且稳定地安装 Docker，并配置加速器。
+
+---
+
+## 一、系统准备
+
+### 更新系统包
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
+
+---
+
+### 可选：卸载旧版本 Docker（如果之前安装过）
+
+```bash
+sudo apt remove docker docker-engine docker.io containerd runc
+```
+
+---
+
+## 二、安装依赖项
+
+Docker 安装需要一些基本组件，先安装它们：
+
+```bash
+sudo apt install -y \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+```
+
+---
+
+## 三、添加 Docker 官方 GPG 密钥（使用国内源）
+
+```bash
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://mirrors.ustc.edu.cn/docker-ce/linux/ubuntu/gpg | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+```
+
+---
+
+## 四、配置国内软件源（以中科大为例）
+
+```bash
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://mirrors.ustc.edu.cn/docker-ce/linux/ubuntu \
+  $(lsb_release -cs) stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+```
+
+---
+
+## 五、安装 Docker Engine
+
+```bash
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+---
+
+## 六、配置 Docker 加速器（推荐）
+
+为了后续拉取镜像更快，可配置镜像加速器：
+
+```bash
+sudo mkdir -p /etc/docker
+```
+
+编辑 `/etc/docker/daemon.json` 文件：
+
+```json
+{
+  "registry-mirrors": [
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://hub-mirror.c.163.com"
+  ]
+}
+```
+
+保存后重启 Docker：
+
+```bash
+sudo systemctl daemon-reexec
+sudo systemctl restart docker
+```
+
+---
+
+## 七、启动与验证
+
+启动 Docker 并设置开机自启：
+
+```bash
+sudo systemctl enable docker
+sudo systemctl start docker
+```
+
+验证是否安装成功：
+
+```bash
+docker version
+docker run hello-world
+```
+
+---
+
+## 八、设置免 sudo（可选）
+
+将当前用户加入 `docker` 用户组，避免每次使用 `sudo`：
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker  # 立即生效
+```
+
+---
+
+## 结语
+
+至此，我们已经在 Ubuntu 24.04 上通过国内源成功安装了 Docker，并配置了镜像加速器，极大提升了安装与拉取镜像的体验。
