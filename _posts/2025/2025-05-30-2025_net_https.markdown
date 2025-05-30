@@ -1,0 +1,111 @@
+---
+layout: page
+title: ASP.NET Core 使用 `urls` 监听端口，并通过代码设置 HTTPS 证书
+category: 技术
+tags: docker
+---
+
+在 ASP.NET Core 中，我们通常可以通过两种方式配置 Kestrel 服务器监听的地址和端口：
+
+1. 在代码中使用 `options.Listen(...)` 绑定 IP/端口/证书；
+2. 或者通过配置文件的 `"urls"` 键，例如：
+
+```json
+{
+  "urls": "http://+:80;https://+:443"
+}
+```
+
+这种方式非常直观，特别适合部署场景，比如在 Docker 容器或服务器上通过配置控制监听端口。但有一个常见的问题是：**如果我使用 `urls` 来控制端口，那么证书和密码还能通过代码配置吗？**
+
+答案是：**可以！**
+
+---
+
+## 目标
+
+* 使用配置项 `"urls"` 设置监听地址与端口；
+* 通过代码设置 HTTPS 证书路径和密码；
+* 不使用 `options.Listen(...)`，以免覆盖 `urls` 配置。
+
+---
+
+## 正确写法：使用 `ConfigureHttpsDefaults`
+
+我们可以通过 `ConfigureKestrel()` 方法设置默认 HTTPS 证书，而无需手动绑定端口，代码如下：
+
+```csharp
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Hosting;
+using System.Security.Cryptography.X509Certificates;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        CreateWebHostBuilder(args).Build().Run();
+    }
+
+    public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
+        WebHost.CreateDefaultBuilder(args)
+            .ConfigureKestrel((context, options) =>
+            {
+                // 设置默认的 HTTPS 证书
+                options.ConfigureHttpsDefaults(httpsOptions =>
+                {
+                    httpsOptions.ServerCertificate = new X509Certificate2(
+                        "certificate/xx.pfx",
+                        "c27c1fa7-9420-4934-96e5-258d4ebbdd00"
+                    );
+                });
+            })
+            .UseUrls("http://+:80;https://+:443") // 保留从配置控制端口的能力
+            .UseStartup<Startup>();
+```
+
+---
+
+## 补充说明
+
+* `.ConfigureHttpsDefaults()` 仅作用于 HTTPS 监听端口，不会影响 HTTP；
+* 如果你的项目有多个证书需求，还可以通过 SNI（Server Name Indication）进行扩展；
+* 你也可以将证书路径和密码放入配置文件中再读取，更灵活安全。
+
+---
+
+## 通过配置文件读取证书路径和密码（进阶）
+
+`appsettings.json` 示例：
+
+```json
+{
+  "urls": "https://+:443",
+  "Certificate": {
+    "Path": "certificate/xx.pfx",
+    "Password": "your-secure-password"
+  }
+}
+```
+
+代码修改为：
+
+```csharp
+options.ConfigureHttpsDefaults(httpsOptions =>
+{
+    var certPath = context.Configuration["Certificate:Path"];
+    var certPwd = context.Configuration["Certificate:Password"];
+    httpsOptions.ServerCertificate = new X509Certificate2(certPath, certPwd);
+});
+```
+
+---
+
+## 总结
+
+如果你希望：
+
+✅ 使用配置中的 `urls` 控制监听端口和协议
+✅ 不在代码中手动绑定端口
+✅ 又能灵活通过代码加载 HTTPS 证书
+
+那么使用 `ConfigureHttpsDefaults()` 是非常推荐的方式。它保持了 Kestrel 的配置灵活性，又让 HTTPS 证书的管理更加集中、安全。
