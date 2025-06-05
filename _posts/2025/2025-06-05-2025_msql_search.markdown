@@ -1,0 +1,185 @@
+---
+layout: page
+title: 使用 MySQL 存储过程实现字符串字段的动态搜索
+category: 技术
+tags: mysql
+---
+
+
+在数据库管理中，查找包含特定值的字符串字段是一项常见需求。（比如数据维护时需要将某个字符串全部替换成另一个字符串，但是已经不记得这个字符串在那个字段）当表和字段数量众多时，手动查询效率低且容易出错。为此，本文介绍一个使用 MySQL 存储过程实现的动态搜索方案，可自动遍历当前数据库中的字符串字段，查找包含指定关键字的记录。
+
+## 一、需求背景
+
+在管理 `prod_warehouse` 数据库时，我需要查找所有表中是否存在包含某个特定值（如 `MX-EM-01-T`）的字符串字段，具体需求如下：
+
+* **动态搜索值**：通过参数传入任意搜索关键字。
+* **字段类型限制**：仅对 `VARCHAR`、`CHAR`、`TEXT` 等字符串类型字段进行搜索。
+* **筛选匹配结果**：只返回存在匹配记录（`match_count > 0`）的字段。
+* **错误处理**：记录执行过程中可能出现的权限或语法错误，便于排查。
+
+## 二、实现方案
+
+存储过程从 `information_schema.columns` 中提取所有字符串类型字段信息，构造并执行动态 SQL，统计包含搜索值的记录数量，最后将结果汇总输出。
+
+## 三、存储过程代码
+
+```sql
+DELIMITER //
+
+CREATE PROCEDURE search_string_in_all_tables(IN search_value VARCHAR(255))
+BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE v_table_name VARCHAR(255);
+    DECLARE v_column_name VARCHAR(255);
+    DECLARE v_query TEXT;
+    DECLARE v_match_count BIGINT;
+    DECLARE v_error_code INT;
+    DECLARE v_error_message TEXT;
+    DECLARE v_error_occurred INT DEFAULT 0;
+
+    DECLARE cur CURSOR FOR
+        SELECT 
+            table_name, 
+            column_name,
+            CONCAT(
+                'SELECT COUNT(*) INTO @match_count ',
+                'FROM ', table_schema, '.', table_name, ' ',
+                'WHERE ', column_name, ' LIKE ''%', search_value, '%'';'
+            ) AS query
+        FROM 
+            information_schema.columns
+        WHERE 
+            table_schema = DATABASE()
+            AND data_type IN ('varchar', 'char', 'text', 'mediumtext', 'longtext');
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION 
+    BEGIN
+        GET DIAGNOSTICS CONDITION 1 
+            v_error_code = MYSQL_ERRNO, 
+            v_error_message = MESSAGE_TEXT;
+        SET v_error_occurred = 1;
+    END;
+
+    DROP TEMPORARY TABLE IF EXISTS search_results;
+    CREATE TEMPORARY TABLE search_results (
+        table_name VARCHAR(255),
+        column_name VARCHAR(255),
+        match_count BIGINT,
+        query_text TEXT,
+        error_code INT,
+        error_message TEXT
+    );
+
+    OPEN cur;
+
+    read_loop: LOOP
+        FETCH cur INTO v_table_name, v_column_name, v_query;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+
+        SET v_error_occurred = 0;
+        SET @sql = v_query;
+
+        PREPARE stmt FROM @sql;
+        IF v_error_occurred = 0 THEN
+            EXECUTE stmt;
+            IF v_error_occurred = 0 THEN
+                INSERT INTO search_results (table_name, column_name, match_count, query_text, error_code, error_message)
+                VALUES (v_table_name, v_column_name, @match_count, v_query, NULL, NULL);
+            ELSE
+                INSERT INTO search_results (table_name, column_name, match_count, query_text, error_code, error_message)
+                VALUES (v_table_name, v_column_name, -1, v_query, v_error_code, v_error_message);
+            END IF;
+            DEALLOCATE PREPARE stmt;
+        ELSE
+            INSERT INTO search_results (table_name, column_name, match_count, query_text, error_code, error_message)
+            VALUES (v_table_name, v_column_name, -1, v_query, v_error_code, v_error_message);
+        END IF;
+    END LOOP;
+
+    CLOSE cur;
+
+    SELECT 
+        table_name, 
+        column_name, 
+        match_count,
+        query_text,
+        error_code,
+        error_message
+    FROM 
+        search_results 
+    WHERE 
+        match_count > 0
+    ORDER BY 
+        table_name, column_name;
+
+    DROP TEMPORARY TABLE IF EXISTS search_results;
+END //
+
+DELIMITER ;
+```
+
+## 四、使用方法
+
+### 1. 调用存储过程
+
+```sql
+CALL search_string_in_all_tables('MX-EM-01-T');
+```
+
+### 2. 示例输出
+
+假设 `warehouse_accountrecordrelations` 表的 `Business` 字段包含两条匹配记录，结果如下：
+
+| table\_name                       | column\_name | match\_count | query\_text                                                                                                                    | error\_code | error\_message |
+| --------------------------------- | ------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------ | ----------- | -------------- |
+| warehouse\_accountrecordrelations | Business     | 2            | SELECT COUNT(\*) INTO @match\_count FROM prod\_warehouse.warehouse\_accountrecordrelations WHERE Business LIKE '%MX-EM-01-T%'; | NULL        | NULL           |
+
+## 五、注意事项
+
+### 1. 权限要求
+
+确保执行用户具有目标数据库的 `SELECT` 权限：
+
+```sql
+SHOW GRANTS FOR CURRENT_USER;
+GRANT SELECT ON prod_warehouse.* TO 'your_user'@'localhost';
+```
+
+### 2. 性能优化
+
+* 对于大型数据库，建议限制表名范围：
+
+  ```sql
+  AND table_name IN ('table1', 'table2')
+  ```
+
+* 在非生产环境中先行测试，避免长时间锁表或高 CPU 消耗。
+
+### 3. 匹配方式调整
+
+* 默认使用模糊匹配（`LIKE '%value%'`），不区分大小写。
+
+* 精确匹配可修改为：
+
+  ```sql
+  WHERE column_name = 'value';
+  ```
+
+* 区分大小写可使用 `BINARY`：
+
+  ```sql
+  WHERE column_name LIKE BINARY '%value%';
+  ```
+
+### 4. 功能扩展建议
+
+* 可改为返回完整匹配记录（`SELECT *`）。
+* 支持更多筛选条件，例如 `match_count > N`。
+* 添加参数以指定只查某些表、某些字段。
+
+## 六、总结
+
+本文介绍的存储过程通过遍历数据库结构并执行动态 SQL，实现了对字符串字段的批量搜索，支持动态搜索值和结果筛选，尤其适用于 MySQL 8 环境下的数据排查、问题定位或数据挖掘任务。开发者可按需扩展以适配更多业务需求。
