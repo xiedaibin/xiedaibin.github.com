@@ -1,0 +1,151 @@
+---
+layout: page
+title: MySQL 多表连接 + 聚合查询的性能优化实践
+category: 技术
+tags: mysql
+---
+
+在实际业务开发中，复杂的统计类 SQL 查询常常因为频繁的表连接和聚合操作而导致性能问题。本文通过一个真实场景的 SQL 查询，演示如何通过公共表表达式（CTE）、逻辑拆分与结构优化，有效提升查询性能。
+
+
+## 🔍 背景与问题描述
+
+原始 SQL 查询用于统计每个产品在仓库中的各种状态（待入库、已入库、待出库等）下的数量和箱数。由于逻辑复杂，涉及三个表的大量连接与聚合，导致执行缓慢、可维护性差。
+
+---
+
+## ✅ 优化目标
+
+* 减少重复连接，提高性能
+* 拆分逻辑结构，提升可读性
+* 支持分页，避免一次加载过多数据
+
+---
+
+## 🛠 优化关键点
+
+### 1. 使用 CTE（公共表表达式）
+
+将多个聚合子查询中都用到的基础表连接操作抽出成一个 `BaseData`，避免重复连接。
+
+### 2. 拆分聚合逻辑
+
+针对不同的聚合统计需求（如待入库数、在库可用数、待出库数等），单独使用一个 CTE 来处理。
+
+### 3. 主查询中聚合拼接 + 分页控制
+
+将所有聚合统计 LEFT JOIN 回主统计表，并通过 `LIMIT` 进行分页控制。
+
+---
+
+## 🧾 完整优化后的 SQL 查询
+
+```sql
+WITH BaseData AS (
+    SELECT
+        rl.ProductId,
+        whbox.WarehouseId,
+        box.ShopId,
+        box.ProductKindCount,
+        whbox.ContainerBoxStatus,
+        whbox.HasException,
+        whbox.WarehouseType,
+        whbox.IsLocked,
+        whbox.InWarehouseCount,
+        rl.ContainerCount,
+        rl.AllowBound
+    FROM warehouse_WarehouseBoxes whbox
+    JOIN warehouse_Boxes box ON whbox.BoxId = box.Id
+    JOIN warehouse_BoxProductRls rl ON box.Id = rl.BoxId
+    WHERE box.ProductKindCount > 0
+        AND whbox.WarehouseType = 1
+        AND (7140703588798103553 = 0 OR box.ShopId = 7140703588798103553)
+        AND (0 = 0 OR rl.ProductId = 0)
+),
+inv AS (
+    SELECT ProductId, WarehouseId, COUNT(1) AS BarCount
+    FROM BaseData
+    WHERE ContainerBoxStatus IS NOT NULL AND HasException = 0
+    GROUP BY ProductId, WarehouseId
+),
+inw AS (
+    SELECT ProductId, WarehouseId, SUM(ContainerCount) AS AwaitInWarehouseCount
+    FROM BaseData
+    WHERE AllowBound = 1 AND ContainerBoxStatus BETWEEN 10 AND 19
+    GROUP BY ProductId, WarehouseId
+),
+inwb AS (
+    SELECT ProductId, WarehouseId, COUNT(1) AS AwaitInWarehouseBoxCount
+    FROM BaseData
+    WHERE ContainerBoxStatus BETWEEN 10 AND 19
+    GROUP BY ProductId, WarehouseId
+),
+onuw AS (
+    SELECT ProductId, WarehouseId, SUM(ContainerCount) AS OnWarehouseUsableCount
+    FROM BaseData
+    WHERE AllowBound = 1 AND ContainerBoxStatus = 20 AND IsLocked = FALSE
+    GROUP BY ProductId, WarehouseId
+),
+onuwb AS (
+    SELECT ProductId, WarehouseId, COUNT(1) AS OnWarehouseUsableBoxCount
+    FROM BaseData
+    WHERE ContainerBoxStatus BETWEEN 20 AND 39 AND InWarehouseCount IS NOT NULL
+    GROUP BY ProductId, WarehouseId
+),
+ouw AS (
+    SELECT ProductId, WarehouseId, SUM(ContainerCount) AS AwaitOutWarehouseCount
+    FROM BaseData
+    WHERE AllowBound = 1 AND ContainerBoxStatus BETWEEN 40 AND 49
+    GROUP BY ProductId, WarehouseId
+),
+ouwb AS (
+    SELECT ProductId, WarehouseId, COUNT(1) AS AwaitOutWarehouseBoxCount
+    FROM BaseData
+    WHERE ContainerBoxStatus BETWEEN 40 AND 49
+    GROUP BY ProductId, WarehouseId
+)
+SELECT
+    inv.ProductId,
+    inv.WarehouseId,
+    inw.AwaitInWarehouseCount,
+    inwb.AwaitInWarehouseBoxCount,
+    onuw.OnWarehouseUsableCount,
+    onuwb.OnWarehouseUsableBoxCount,
+    ouw.AwaitOutWarehouseCount,
+    ouwb.AwaitOutWarehouseBoxCount
+FROM inv
+LEFT JOIN inw ON inw.ProductId = inv.ProductId AND inw.WarehouseId = inv.WarehouseId
+LEFT JOIN inwb ON inwb.ProductId = inv.ProductId AND inwb.WarehouseId = inv.WarehouseId
+LEFT JOIN onuw ON onuw.ProductId = inv.ProductId AND onuw.WarehouseId = inv.WarehouseId
+LEFT JOIN onuwb ON onuwb.ProductId = inv.ProductId AND onuwb.WarehouseId = inv.WarehouseId
+LEFT JOIN ouw ON ouw.ProductId = inv.ProductId AND ouw.WarehouseId = inv.WarehouseId
+LEFT JOIN ouwb ON ouwb.ProductId = inv.ProductId AND ouwb.WarehouseId = inv.WarehouseId
+LIMIT 0, 10;
+```
+
+---
+
+## 📌 附加优化建议
+
+1. **添加索引**：确保以下字段存在 BTree 索引以提高 JOIN 与 WHERE 性能：
+
+   * `warehouse_Boxes.Id`
+   * `warehouse_BoxProductRls.BoxId`
+   * `warehouse_BoxProductRls.ProductId`
+   * `warehouse_WarehouseBoxes.BoxId`
+   * `warehouse_WarehouseBoxes.ContainerBoxStatus`
+   * `warehouse_WarehouseBoxes.IsLocked`
+   * `warehouse_WarehouseBoxes.HasException`
+   * `warehouse_WarehouseBoxes.WarehouseType`
+   * `warehouse_Boxes.ShopId`
+   * `warehouse_Boxes.ProductKindCount`
+
+2. **使用 EXPLAIN 分析执行计划**：可帮助确认是否使用索引、连接顺序是否合理。
+
+3. **考虑将 BaseData 落地为临时表**：对于频繁使用的逻辑，可以使用临时表缓存 BaseData 内容，避免重复计算。
+
+---
+
+## ✅ 总结
+
+通过结构重构（CTE）、逻辑拆分与索引优化，我们将一个复杂的 SQL 查询变得更高效、更清晰。如果你在处理复杂聚合查询时遇到性能瓶颈，不妨尝试这种方式进行重构。
