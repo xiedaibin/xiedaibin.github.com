@@ -1,0 +1,141 @@
+---
+layout: page
+title: MySQL 性能优化：为什么带条件的 COUNT 查询比全表 COUNT 更慢？
+category: 技术
+tags: mysql
+---
+
+在日常的 MySQL 使用过程中，我们有时会发现一种看似反常的现象：
+
+```sql
+SELECT COUNT(*) FROM table; -- 很快
+SELECT COUNT(*) FROM table WHERE 条件; -- 很慢
+```
+
+本文以一个实际的案例为切入点，深入分析这种情况发生的原因，并给出优化策略。
+
+---
+
+## 🧪 1. 问题背景
+
+我们在一张名为 `warehouse_DwTransferWarehouseRecords` 的表中执行如下查询：
+
+```sql
+SELECT COUNT(*)
+FROM warehouse_DwTransferWarehouseRecords AS w
+WHERE w.IsDeleted = false
+  AND w.WarehouseId = 6923798458835279885;
+```
+
+但这条 SQL 比以下无条件的查询还慢：
+
+```sql
+SELECT COUNT(*) FROM warehouse_DwTransferWarehouseRecords;
+```
+
+这让人疑惑：**加了过滤条件，为什么反而更慢？**
+
+---
+
+## 🔍 2. 初步分析：执行计划（Explain）
+
+我们使用 `EXPLAIN` 查看执行计划，结果如下：
+
+| id | select\_type | table | type | key                                                                         | rows   | Extra       |
+| -- | ------------ | ----- | ---- | --------------------------------------------------------------------------- | ------ | ----------- |
+| 1  | SIMPLE       | w     | ref  | IX\_warehouse\_DwTransferWarehouseRecords\_WarehouseId\_SeSku\_CreationTime | 247350 | Using where |
+
+这说明：
+
+* MySQL 使用了现有索引 `IX_warehouse_DwTransferWarehouseRecords_WarehouseId_SeSku_CreationTime`
+* 该索引只包含 `WarehouseId`, `SeSku`, `CreationTime`，**不包含 `IsDeleted`**
+* 查询中虽然命中了 `WarehouseId`，但 `IsDeleted` 条件无法在索引中判断，需要回表判断
+* 查询需要读取约 24 万行进行回表判断，导致性能低下
+
+---
+
+## 🧱 3. 表结构与索引情况
+
+通过 `SHOW INDEX` 语句我们确认当前索引结构如下：
+
+```text
+索引名：IX_warehouse_DwTransferWarehouseRecords_WarehouseId_SeSku_CreationTime
+字段顺序：WarehouseId, SeSku, CreationTime
+缺失字段：IsDeleted
+```
+
+当前的索引主要用于以下类型的查询：
+
+```sql
+SELECT * FROM warehouse_DwTransferWarehouseRecords
+WHERE WarehouseId = ? AND SeSku = ? AND CreationTime BETWEEN ? AND ?;
+```
+
+但对如下带 `IsDeleted` 条件的计数查询，并没有任何优化作用。
+
+---
+
+## ⚙️ 4. 解决方案：建立复合索引
+
+为了解决上述问题，我们需要建立一个**覆盖查询字段的新复合索引**：
+
+### ✅ 推荐索引：
+
+```sql
+CREATE INDEX idx_warehouseid_isdeleted 
+ON warehouse_DwTransferWarehouseRecords (WarehouseId, IsDeleted);
+```
+
+这个索引能够直接优化查询条件：
+
+```sql
+SELECT COUNT(*) 
+FROM warehouse_DwTransferWarehouseRecords
+WHERE WarehouseId = 6923798458835279885
+  AND IsDeleted = false;
+```
+
+MySQL 会：
+
+* 在索引中快速定位 `WarehouseId = xxx` 的所有记录
+* 同时利用索引中 `IsDeleted` 字段，直接过滤出 `false` 的记录
+* 极大减少回表，提高查询性能
+
+---
+
+## 🧠 5. 进阶技巧：覆盖索引 + FORCE INDEX
+
+如果你只查询 `COUNT(*)`，完全可以使用覆盖索引避免回表：
+
+```sql
+-- 更快的版本，避免回表
+SELECT COUNT(1)
+FROM warehouse_DwTransferWarehouseRecords FORCE INDEX (idx_warehouseid_isdeleted)
+WHERE WarehouseId = 6923798458835279885
+  AND IsDeleted = false;
+```
+
+使用 `FORCE INDEX` 可以确保 MySQL 使用你刚创建的索引进行扫描。
+
+---
+
+## ✅ 6. 总结
+
+| 问题      | 说明                                     |
+| ------- | -------------------------------------- |
+| 查询慢     | 现有索引未覆盖所有查询条件，导致 MySQL 大量回表判断          |
+| 索引结构不合理 | 缺失 `IsDeleted` 字段                      |
+| 解决方案    | 建立 `(WarehouseId, IsDeleted)` 复合索引     |
+| 加强优化    | 使用 `FORCE INDEX` 避免回表，提高 `COUNT(*)` 性能 |
+
+---
+
+## 🔚 7. 后记
+
+如果你在实际开发中发现“带过滤条件的 COUNT 比全表 COUNT 还慢”，请务必检查：
+
+* 查询条件是否使用了索引；
+* 是否存在不必要的回表；
+* 是否可以改用覆盖索引避免读取完整行数据。
+
+对索引的合理设计和使用，是数据库性能优化的关键。
