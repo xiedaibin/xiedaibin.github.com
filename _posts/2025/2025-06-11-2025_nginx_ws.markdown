@@ -1,0 +1,74 @@
+---
+layout: page
+title: Nginx 代理 WebSocket 所需的关键配置说明
+category: 技术
+tags: nginx
+---
+
+# Nginx 配置代理 WebSocket 的关键参数解析
+
+在通过 Nginx 转发 WebSocket 请求（如 SignalR 或 Socket.IO）时，常见问题是连接失败或无法升级为 WebSocket 协议。本文将详细解析 WebSocket 代理中几条**必不可少的配置项**及其原理，帮助你顺利实现转发。
+
+## 示例配置
+
+```nginx
+location /gateway/ {
+    proxy_pass http://8.141.91.204:6803/;
+
+    # 1. 启用 HTTP/1.1 协议，支持 Upgrade
+    proxy_http_version 1.1;
+
+    # 2. 转发 WebSocket 所需的关键头部
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+
+    # 3. 保持原始 Host 头部（可选，根据后端要求）
+    proxy_set_header Host $host;
+}
+```
+
+## 关键配置项解析
+
+### 1. `proxy_http_version 1.1`
+
+* **作用**：强制 Nginx 与后端服务器使用 HTTP/1.1。
+* **原因**：WebSocket 协议要求基于 HTTP/1.1 的协议升级机制（Upgrade），而 HTTP/1.0 不支持该特性。
+
+### 2. `proxy_set_header Upgrade $http_upgrade`
+
+* **作用**：将客户端请求中的 `Upgrade` 头部值（如 `websocket`）传递给后端。
+* **说明**：这是客户端告诉服务端希望“升级协议”的方式，Nginx 需要转发此头部，后端才会响应升级。
+
+### 3. `proxy_set_header Connection "Upgrade"`
+
+* **作用**：明确告诉后端当前连接将进行协议升级。
+* **说明**：这是 WebSocket 握手协议的一部分，缺失时后端会拒绝升级。
+
+### 4. `proxy_set_header Host $host`（可选）
+
+* **作用**：保留原始请求头中的 Host 值，有些后端服务器会用 Host 验证来源。
+
+## 小结表格
+
+| 配置项                               | 作用说明                        |
+| --------------------------------- | --------------------------- |
+| `proxy_http_version 1.1`          | 使用 HTTP/1.1 协议以支持 Upgrade   |
+| `proxy_set_header Upgrade ...`    | 转发 Upgrade 请求头（如 websocket） |
+| `proxy_set_header Connection ...` | 明确请求进行协议升级                  |
+| `proxy_set_header Host ...`       | （可选）保留原始主机名                 |
+
+## 常见错误示例
+
+如果未添加这些配置，可能会遇到如下错误：
+
+```text
+Error connecting to downstream service
+System.Net.Http.HttpRequestException: Error while copying content to a stream.
+Inner Exception: System.IO.IOException: Connection reset by peer
+```
+
+或者浏览器端会提示：
+
+```text
+WebSocket connection to 'ws://...' failed: Error during WebSocket handshake
+```
