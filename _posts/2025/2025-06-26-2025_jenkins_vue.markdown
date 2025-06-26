@@ -1,0 +1,169 @@
+---
+layout: page
+title: Jenkins 使用 Docker 构建 Vue 项目（多阶段构建 + 构建产物导出）
+category: 技术
+tags: jenkins docker vue
+---
+
+
+在前端项目的构建与部署过程中，使用 Docker 进行隔离式构建可以带来诸多优势，例如：环境一致性、构建可复现、自动化部署等。本文将详细介绍：
+
+* 如何用 Docker 构建 Vue 项目（dev 模式）
+* 如何导出构建产物到宿主机目录
+* 如何避免缓存导致的构建失败
+* 并附带完整项目配置及一张构建流程图 📈
+
+---
+
+## 📁 目录结构概览
+
+项目目录结构如下（简化）：
+
+```
+vue-project/
+├── Dockerfile
+├── package.json
+├── vite.config.js
+├── src/
+├── public/
+└── ...
+```
+
+---
+
+## ⚙️ package.json 中的构建脚本配置
+
+请确保 `package.json` 中加入如下构建脚本：
+
+```json
+{
+  "scripts": {
+    "build-dev": "vite build --mode dev --outDir dist/dev"
+  }
+}
+```
+
+这将使用 Vite 构建项目，并将构建产物输出到 `dist/dev` 目录下。
+
+---
+
+## 🐋 Dockerfile
+
+这是我们采用的多阶段 Dockerfile，构建 Vue 项目并导出产物：
+
+```dockerfile
+# 1️⃣ 构建阶段
+FROM node:18 AS builder
+
+WORKDIR /app
+
+# 拷贝依赖清单并安装依赖
+COPY package.json package-lock.json* ./
+RUN npm install
+
+# 拷贝项目源码并构建
+COPY . .
+RUN npm run build-dev
+
+# 2️⃣ 导出阶段：只保留构建产物
+FROM node:18 AS runner
+
+WORKDIR /app
+
+# 拷贝构建产物
+COPY --from=builder /app/dist/dev ./dist
+
+# 默认使用 bash 命令，方便调试
+CMD ["bash"]
+```
+
+---
+
+## 🧰 构建与导出脚本
+
+你可以使用以下脚本完成镜像构建并将产物导出到宿主机(如：Jenkins -> 构建 -> Execute Shell)：
+
+```bash
+#!/bin/bash
+
+# 输出目录
+OUTPUT_DIR="/root/work/dist/vue_cgc_public"
+
+# 强制构建（不使用缓存）
+docker build --no-cache -t vue-build-image .
+
+# 清空旧构建产物
+rm -rf ${OUTPUT_DIR}/*
+
+# 运行容器并拷贝构建产物到宿主机目录
+docker run --rm \
+  -v ${OUTPUT_DIR}:/output \
+  vue-build-image \
+  bash -c "cp -r /app/dist/* /output/"
+```
+
+---
+
+## 📦 构建产物示例
+
+构建成功后，输出目录 `/root/work/dist/vue_cgc_public` 应包含：
+
+```
+vue_cgc_public/
+├── index.html
+├── favicon.ico
+├── assets/
+└── images/
+```
+
+---
+
+## 🧭 构建流程图
+
+下面是整个构建过程的流程图，方便理解多阶段构建和产物导出逻辑：
+
+```
++-------------------------+
+|   Node:18 Builder(image) |
+|-------------------------|
+| 1. COPY package*.json   |
+| 2. RUN npm install      |
+| 3. COPY .               |
+| 4. RUN npm run build-dev|
+|    -> dist/dev          |
++-------------------------+
+           |
+           v
++-------------------------+
+|   Node:18 Runner(container) |
+|-------------------------|
+| COPY dist/dev -> ./dist |
+| RUN cp /app/dist -> /output |
++-------------------------+
+           |
+           v
++-------------------------+
+|  Host: /root/work/dist  |
+|  vue_cgc_public/        |
+|-------------------------|
+|  构建产物成功导出 🎉     |
++-------------------------+
+```
+
+---
+
+## ✅ 小贴士
+
+| 项目                  | 说明                       |
+| ------------------- | ------------------------ |
+| `--no-cache`        | 禁用缓存，确保构建环境干净            |
+| `npm run build-dev` | 使用 Vite 构建输出至 `dist/dev` |
+| `/output`           | 是宿主机目录挂载到容器中，用于导出构建产物    |
+| `CMD ["bash"]`      | 默认运行 bash，方便调试容器内文件结构    |
+
+---
+
+## 📌 总结
+
+使用多阶段 Dockerfile + 显式 `cp` 拷贝构建产物，可以避免 Vue 项目构建后“文件丢失”或宿主机挂载目录为空的问题，适合用于 CI/CD 场景或构建自动化。
+
