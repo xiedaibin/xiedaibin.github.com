@@ -1,0 +1,126 @@
+---
+layout: page
+title: 解析 Sqids 编码核心：基于自定义 Alphabet 的 base-N 转换
+category: 技术
+tags: 算法
+---
+
+在日常开发中，我们常常会遇到需要将一串数字（比如数据库中的 ID）转换为更短、可读性更强、适合在 URL 中展示的字符串。这时候，像 [sqids](https://github.com/sqids/sqids-dotnet) 这样的工具就派上用场了。
+
+今天我们就以 `sqids-dotnet` 项目中的核心代码 `SqidsEncoder.cs` 为例，深入解析其背后的**编码与解码机制**。
+
+---
+
+## Sqids 是加密吗？
+
+首先需要明确，**Sqids 并不是加密算法**。它并不提供保密性，也不依赖密钥。它的目标是：
+
+* 将数字 ID 映射为更短、更“随机”的字符串；
+* 避免包含敏感词；
+* 可逆，即字符串可以还原为原始数字；
+* 支持自定义字符集（alphabet）和最小长度（minLength）；
+
+---
+
+## 核心原理：base-N 转换 + 自定义 Alphabet
+
+### 什么是 base-N 转换？
+
+简单来说，base-N 转换就是用 N 进制来表示一个十进制数字。例如：
+
+* 十进制 `123` 转为二进制是 `1111011`；
+* 十进制 `123` 用 base-5（五进制）表示是 `443`。
+
+在 Sqids 中，**“进制”由自定义的字符集 Alphabet 决定**：
+
+```text
+Alphabet = "abcde" → base-5
+Alphabet = "abcdef" → base-6
+Alphabet = "abcdefghijklmnopqrstuvwxyz0123456789" → base-36
+```
+
+### 编码过程：ToId
+
+Sqids 的编码过程其实就是把一个十进制数字转换为 alphabet 字符集下的“base-N 字符串”。
+
+源码如下（精简版）：
+
+```csharp
+private string ToId(ulong number, string alphabet)
+{
+    var idBuilder = new StringBuilder();
+    var alphabetLength = (ulong)alphabet.Length;
+
+    do {
+        var index = (int)(number % alphabetLength);
+        idBuilder.Insert(0, alphabet[index]);
+        number /= alphabetLength;
+    } while (number > 0);
+
+    return idBuilder.ToString();
+}
+```
+
+> **逻辑说明**：
+>
+> * 不断取余：`number % alphabet.Length`，得到当前位；
+> * 每次插入字符串最前面（因为高位在前）；
+> * 再除以 alphabet 长度，进入下一位；
+
+#### 示例：
+
+```csharp
+number = 123
+alphabet = "abcde" // 长度为 5（base-5）
+
+步骤：
+123 % 5 = 3 → 'd'
+123 / 5 = 24
+
+24 % 5 = 4 → 'e'
+24 / 5 = 4
+
+4 % 5 = 4 → 'e'
+最终编码字符串 = "eed"
+```
+
+---
+
+## 解码过程：FromId
+
+解码的逻辑是把字符串还原为数字：
+
+```csharp
+private ulong FromId(string id, string alphabet)
+{
+    ulong number = 0;
+    var alphabetLength = (ulong)alphabet.Length;
+
+    for (var i = 0; i < id.Length; i++) {
+        var index = (ulong)alphabet.IndexOf(id[i]);
+        number = number * alphabetLength + index;
+    }
+
+    return number;
+}
+```
+
+每次取字母在 alphabet 中的位置作为数值，然后按进制累加回十进制。
+
+---
+
+## 小结：Sqids 的编码逻辑核心
+
+| 特性     | 说明                          |
+| ------ | --------------------------- |
+| 可逆     | 编码后可解码回数字                   |
+| 非加密    | 并非保密机制，仅混淆                  |
+| 自定义字符集 | Alphabet 可被定制，提供可预测性与“伪私密性” |
+| 支持最小长度 | MinLength 设置用于填充，提高不可预测性    |
+| 过滤敏感词  | 内置避免生成不雅词汇                  |
+
+---
+
+## ✅ 最后一句话总结
+
+> **Sqids 的本质是对数字进行自定义 base-N 转换**，利用用户指定的字符集，将数字编码为短小、安全、可读、可逆的字符串 ID。
