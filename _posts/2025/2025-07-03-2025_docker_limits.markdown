@@ -1,0 +1,188 @@
+---
+layout: page
+title: Docker 容器资源限制验证指南
+category: 技术
+tags: docker
+---
+
+在生产环境中，为 Docker 容器设置资源限制是确保系统稳定性的重要手段。本文将详细介绍如何验证 Docker Compose 中的资源限制配置是否真正生效。
+
+## 配置示例
+
+以下是一个 Redis 容器的完整配置示例，包含了内存和 CPU 的资源限制：
+
+```yaml
+version: '3.8'
+services:
+  myredis:
+    image: redis:7.2.4-alpine
+    container_name: myredis
+    restart: unless-stopped
+
+    # 资源限制配置
+    deploy:
+      resources:
+        limits:
+          memory: 1G        # 内存上限
+          cpus: '0.5'       # CPU 上限
+        reservations:
+          memory: 256M      # 内存预留
+          cpus: '0.1'       # CPU 预留
+
+    # 其他配置...
+    ports:
+      - "6379:6379"
+```
+
+## 验证方法
+
+### 1. 实时资源监控
+
+使用 `docker stats` 命令可以实时查看容器的资源使用情况：
+
+```bash
+# 查看所有容器资源使用
+docker stats
+
+# 只查看特定容器
+docker stats myredis
+
+# 显示一次性结果
+docker stats --no-stream myredis
+```
+
+输出示例：
+```
+CONTAINER ID   NAME      CPU %     MEM USAGE / LIMIT     MEM %     NET I/O     BLOCK I/O   PIDS
+abc123def456   myredis   0.5%      45.2MiB / 1GiB       4.41%     656B/0B     0B/0B       4
+```
+
+### 2. 检查容器配置
+
+通过 `docker inspect` 命令查看容器的详细配置：
+
+```bash
+# 查看完整容器信息
+docker inspect myredis
+
+# 筛选资源相关配置
+docker inspect myredis | grep -A 10 -B 5 "Memory\|Cpu"
+
+# 使用 jq 格式化输出（需要安装 jq）
+docker inspect myredis | jq '.[0].HostConfig | {Memory, CpuQuota, CpuPeriod}'
+```
+
+### 3. 查看 cgroup 信息
+
+Linux 系统可以直接查看 cgroup 中的资源限制配置：
+
+```bash
+# 查看内存限制（字节）
+docker exec myredis cat /sys/fs/cgroup/memory/memory.limit_in_bytes
+
+# 查看当前内存使用量
+docker exec myredis cat /sys/fs/cgroup/memory/memory.usage_in_bytes
+
+# 查看 CPU 配额和周期
+docker exec myredis cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us
+docker exec myredis cat /sys/fs/cgroup/cpu/cpu.cfs_period_us
+```
+
+## CPU 限制解读
+
+### CFS 调度器参数说明
+
+- **cpu.cfs_period_us**: 调度周期，默认 100,000 微秒（100ms）
+- **cpu.cfs_quota_us**: 每个调度周期内允许使用的 CPU 时间（微秒）
+
+### 实际案例分析
+
+当执行以下命令：
+```bash
+docker exec myredis cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us
+```
+
+如果返回 `50000`，计算方式如下：
+```
+CPU 限制 = cpu.cfs_quota_us / cpu.cfs_period_us
+         = 50,000 / 100,000
+         = 0.5 核心
+```
+
+### 常见值对照表
+
+| cpu.cfs_quota_us | CPU 限制 |
+|------------------|----------|
+| 25000            | 0.25 核心 |
+| 50000            | 0.5 核心  |
+| 100000           | 1.0 核心  |
+| 200000           | 2.0 核心  |
+| -1               | 无限制    |
+
+## 压力测试验证
+
+为了验证资源限制是否真正生效，可以进行压力测试：
+
+```bash
+# 连接到 Redis
+redis-cli -h localhost -p 6379
+
+# 批量写入数据测试内存限制
+for i in {1..100000}; do
+    echo "SET key$i 'test data with some length to consume memory'"
+done | redis-cli -h localhost -p 6379 --pipe
+```
+
+在测试过程中，使用 `docker stats` 监控资源使用情况，观察是否达到设定的限制值。
+
+## 常见问题排查
+
+### 1. 资源限制未生效
+
+可能原因：
+- Docker 版本过旧，不支持某些资源限制功能
+- `deploy` 配置主要用于 Docker Swarm 模式
+- 系统不支持 cgroup 资源限制
+
+### 2. 替代配置方案
+
+如果 `deploy` 配置不生效，可以使用传统语法：
+
+```yaml
+services:
+  myredis:
+    image: redis:7.2.4-alpine
+    mem_limit: 1g
+    mem_reservation: 256m
+    cpus: 0.5
+    # 移除 deploy 部分
+```
+
+### 3. 验证命令汇总
+
+```bash
+# 快速验证脚本
+#!/bin/bash
+CONTAINER_NAME="myredis"
+
+echo "=== 容器状态 ==="
+docker stats --no-stream $CONTAINER_NAME
+
+echo "=== 内存限制 ==="
+docker exec $CONTAINER_NAME cat /sys/fs/cgroup/memory/memory.limit_in_bytes
+
+echo "=== CPU 限制 ==="
+QUOTA=$(docker exec $CONTAINER_NAME cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us)
+PERIOD=$(docker exec $CONTAINER_NAME cat /sys/fs/cgroup/cpu/cpu.cfs_period_us)
+echo "CPU 限制: $(echo "scale=2; $QUOTA/$PERIOD" | bc) 核心"
+```
+
+## 最佳实践
+
+1. **监控优先**: 定期使用 `docker stats` 监控容器资源使用情况
+2. **渐进调整**: 根据实际使用情况逐步调整资源限制
+3. **日志记录**: 关注容器日志中的资源相关警告或错误
+4. **压力测试**: 在生产环境部署前进行充分的压力测试
+5. **备选方案**: 准备好不同的资源限制配置方案
+
+通过以上方法，你可以有效地验证和管理 Docker 容器的资源限制，确保应用在受控的资源环境中稳定运行。
