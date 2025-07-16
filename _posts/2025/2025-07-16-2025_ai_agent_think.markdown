@@ -1,7 +1,7 @@
 ---
 layout: page
 title: AI Agent 的本质不是工具，而是编程协作者
-category: 技术
+category: Thinking
 tags: AI
 ---
 
