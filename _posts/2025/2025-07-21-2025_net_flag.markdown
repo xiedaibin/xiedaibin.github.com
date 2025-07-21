@@ -1,0 +1,150 @@
+---
+layout: page
+title: C# 中使用位运算管理枚举标志位（Flags）
+category: 技术
+tags: NET
+---
+
+在开发中，我们经常会遇到“多状态组合”的场景，比如一个箱子是否需要温控、是否为危险品、是否超大、是否易碎等。使用普通布尔变量会很难维护，而使用带有 `[Flags]` 特性的枚举配合位运算，则是一个优雅的解决方案。
+
+本文将通过一个实际的“箱存储费标记”例子，讲解 `|=`, `&= ~` 这些位运算的使用方式。
+
+---
+
+## 🎯 场景描述
+
+```csharp
+/// <summary>
+/// 箱存储费标记(用于标记是否计算特殊存储费)
+/// </summary>
+[Comment("箱存储费标记")]
+public virtual BoxStorageFeeFlagType StorageFeeFlag { get; private set; }
+
+/// <summary>
+/// 新增箱存储费标记
+/// </summary>
+public WarehouseBox AddStorageFeeFlag(BoxStorageFeeFlagType StorageFeeFlag)
+{
+    this.StorageFeeFlag |= StorageFeeFlag;
+    return this;
+}
+
+/// <summary>
+/// 移除箱存储费标记
+/// </summary>
+public WarehouseBox RemoveStorageFeeFlag(BoxStorageFeeFlagType StorageFeeFlag)
+{
+    this.StorageFeeFlag &= ~StorageFeeFlag;
+    return this;
+}
+```
+
+---
+
+## 🧾 定义 Flags 枚举
+
+```csharp
+[Flags]
+public enum BoxStorageFeeFlagType
+{
+    None = 0,
+    TemperatureControlled = 1,  // 0001
+    Hazardous = 2,              // 0010
+    Oversized = 4,              // 0100
+    Fragile = 8                 // 1000
+}
+```
+
+加上 `[Flags]` 特性，可以使多个值组合显示更友好，例如输出为：
+
+```
+TemperatureControlled, Fragile
+```
+
+---
+
+## 🧠 位运算基本操作
+
+| 操作        | 含义          | 示例                     | 效果               |            |                 |
+| --------- | ----------- | ---------------------- | ---------------- | ---------- | --------------- |
+| \`        | =\`         | 按位或（添加标记）              | \`flags          | = FlagA;\` | 将 FlagA 添加进现有标志 |
+| `&= ~`    | 按位与取反（移除标记） | `flags &= ~FlagA;`     | 将 FlagA 从现有标志中移除 |            |                 |
+| `HasFlag` | 判断标志是否存在    | `flags.HasFlag(FlagA)` | 返回是否包含 FlagA     |            |                 |
+
+---
+
+## 🖼 图示：添加与移除标志
+
+### ✅ 添加标志（`|=`）
+
+```csharp
+box.AddStorageFeeFlag(BoxStorageFeeFlagType.Fragile);
+```
+
+假设当前标志为：
+
+```
+0001  (TemperatureControlled)
+```
+
+添加 Fragile（1000）后：
+
+```
+0001
+| 1000
+= 1001
+```
+
+🧾 最终值：`TemperatureControlled, Fragile`
+
+---
+
+### ❌ 移除标志（`&= ~`）
+
+```csharp
+box.RemoveStorageFeeFlag(BoxStorageFeeFlagType.TemperatureControlled);
+```
+
+当前值：
+
+```
+1001  (TemperatureControlled + Fragile)
+```
+
+移除 TemperatureControlled（0001）：
+
+```
+~0001 = 1110
+1001 & 1110 = 1000
+```
+
+🧾 最终值：`Fragile`
+
+---
+
+## 🧪 示例代码演示
+
+```csharp
+var box = new WarehouseBox();
+
+box.AddStorageFeeFlag(BoxStorageFeeFlagType.TemperatureControlled);
+box.AddStorageFeeFlag(BoxStorageFeeFlagType.Fragile);
+Console.WriteLine(box.StorageFeeFlag);
+// 输出: TemperatureControlled, Fragile
+
+box.RemoveStorageFeeFlag(BoxStorageFeeFlagType.TemperatureControlled);
+Console.WriteLine(box.StorageFeeFlag);
+// 输出: Fragile
+```
+
+---
+
+## ✅ 总结
+
+使用位运算结合 `[Flags]` 枚举能大幅提升多状态标志的表示力和可维护性：
+
+* `|=` 添加标记
+* `&= ~` 移除标记
+* `HasFlag()` 判断是否存在某个标记
+
+不仅代码简洁，而且运行效率极高，是处理类似权限、状态、功能开关等场景的理想方案。
