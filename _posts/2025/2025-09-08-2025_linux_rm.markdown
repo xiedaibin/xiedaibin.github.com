@@ -1,0 +1,142 @@
+---
+layout: page
+title: Linux 下使用 `rm` 命令安全删除并保留指定文件/文件夹
+category: 技术
+tags: docker
+---
+
+在日常运维或开发过程中，我们经常会遇到这样的需求：
+想要清空某个目录下的所有内容，但又需要保留部分文件或文件夹。
+如果直接使用 `rm -rf ./*`，会把当前目录下所有内容全部删除，非常危险。
+本文将介绍几种安全的写法，并提供一个通用脚本，方便日常使用。
+
+---
+
+## 1. 删除时保留单个文件
+
+比如，我们要删除当前目录下所有内容，但保留 `vps3WqbS4P.txt` 这个文件，可以这样写：
+
+```bash
+find . -mindepth 1 ! -name 'vps3WqbS4P.txt' -exec rm -rf {} +
+```
+
+解释：
+
+* `-mindepth 1`：避免匹配到当前目录 `.` 本身。
+* `! -name 'xxx'`：排除不删除的文件或目录。
+* `-exec rm -rf {} +`：删除匹配到的文件和目录。
+
+---
+
+## 2. 删除时保留单个文件夹
+
+如果要删除当前目录下所有内容，但保留 `xx` 文件夹：
+
+```bash
+find . -mindepth 1 ! -name 'xx' -exec rm -rf {} +
+```
+
+这样会删掉除 `xx` 文件夹以外的所有文件和目录。
+
+---
+
+## 3. 删除时保留多个文件或文件夹
+
+### 方法一：多个 `! -name`
+
+如果要保留 `xx` 文件夹、`yy` 文件夹和 `keep.txt` 文件：
+
+```bash
+find . -mindepth 1 ! -name 'xx' ! -name 'yy' ! -name 'keep.txt' -exec rm -rf {} +
+```
+
+### 方法二：使用正则
+
+如果保留的内容比较多，可以用正则：
+
+```bash
+find . -mindepth 1 | egrep -v './(xx|yy|keep.txt)$' | xargs rm -rf
+```
+
+---
+
+## 4. 通用脚本：保留指定文件/文件夹
+
+为了更方便管理，我们可以写一个通用脚本 `safe_rm_except.sh`：
+
+```bash
+#!/bin/bash
+# 用法: ./safe_rm_except.sh [--dry-run] pattern1 pattern2 ...
+# 示例:
+#   ./safe_rm_except.sh --dry-run xx yy keep.txt '*.txt'
+#   ./safe_rm_except.sh xx yy keep.txt '*.log'
+
+dry_run=false
+if [ "$1" = "--dry-run" ]; then
+  dry_run=true
+  shift
+fi
+
+if [ $# -eq 0 ]; then
+  echo "用法: $0 [--dry-run] 保留项1 保留项2 ..."
+  exit 1
+fi
+
+# 构建 find 命令
+cmd="find . -mindepth 1"
+for keep in "$@"; do
+  cmd="$cmd ! -path './$keep'"
+done
+
+if [ "$dry_run" = true ]; then
+  echo "干跑模式: 以下文件/文件夹会被删除 (实际不会删除):"
+  eval "$cmd -print"
+else
+  cmd="$cmd -exec rm -rf {} +"
+  echo "即将执行命令："
+  echo "$cmd"
+  echo
+  read -p "是否确认删除? (yes/no): " confirm
+  if [ "$confirm" = "yes" ]; then
+    eval "$cmd"
+    echo "删除完成。"
+  else
+    echo "操作已取消。"
+  fi
+fi
+```
+
+保存后赋予执行权限：
+
+```bash
+chmod +x safe_rm_except.sh
+```
+
+---
+
+## 5. 使用示例
+
+1. **保留单个文件和文件夹**
+
+   ```bash
+   ./safe_rm_except.sh keep.txt xx
+   ```
+
+2. **保留所有 `.txt` 文件**
+
+   ```bash
+   ./safe_rm_except.sh '*.txt'
+   ```
+
+3. **干跑模式（只显示将要删除的内容，不执行删除）**
+
+   ```bash
+   ./safe_rm_except.sh --dry-run '*.txt' xx
+   ```
+
+---
+
+## 总结
+
+相比直接使用 `rm -rf ./*`，结合 `find` 过滤条件或者使用脚本，可以极大地降低误删风险。
+特别是脚本中的 **干跑模式**，可以帮助我们在真正删除前确认操作结果，避免不必要的损失。
