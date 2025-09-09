@@ -1,0 +1,137 @@
+---
+layout: page
+title: 使用 VS2022 打包 .NET 8 WinForms 应用 MSI 并解决 WebView2 权限问题
+category: 技术
+tags: docker
+---
+
+在将 .NET 8 WinForms 程序通过 **Visual Studio Installer Project (vdproj)** 打包成 MSI 时，我遇到了一系列问题，从快捷方式指向 DLL，到 WebView2 无法正常启动。经过多次尝试，最终成功解决。这里记录一下完整过程和关键点，供参考。
+
+---
+
+## 1. 正确使用发布版本，而不是主输出
+
+在传统的 .NET Framework 项目中，安装项目里选择 **主输出** 就能得到可执行文件。但在 **.NET 8 WinForms** 中，主输出实际上只会生成 **DLL**（例如 `xxx.dll`），而不是独立的 EXE。
+
+❌ 错误做法：
+在安装项目里直接添加 **主输出**，会导致快捷方式指向 DLL，程序无法运行。
+
+✅ 正确做法：
+必须先用 **发布配置**（例如 `ClickOnceProfile.pubxml` 或 `dotnet publish`）发布应用，然后在安装项目中添加发布后的文件作为内容。
+这样快捷方式才能指向真正的 `exe`，应用才能正常启动。
+
+---
+
+## 2. WebView2Loader.dll 缺失问题
+
+打包后运行时，出现过如下错误：
+
+```
+System.DllNotFoundException: Unable to load DLL 'WebView2Loader.dll'
+```
+
+原因是 `WebView2Loader.dll` 默认只存在于 `runtimes\win-x64\native` 下，发布时不会自动复制到 EXE 目录。
+
+### 解决方案：使用静态加载（推荐 ✅）
+
+在 `.csproj` 中添加以下配置：
+
+```xml
+<PropertyGroup>
+  <WebView2LoaderPreference>Static</WebView2LoaderPreference>
+</PropertyGroup>
+```
+
+这样 `WebView2Loader.dll` 会被编译到 EXE 内部，不再需要额外的 DLL 文件，部署和打包更简单。
+
+👉 官方参考文档：[如何静态链接 WebView2Loader.dll](https://learn.microsoft.com/zh-cn/microsoft-edge/webview2/how-to/static)
+
+---
+
+## 3. 安装到 C 盘时报权限错误
+
+安装到 `D:\Program Files...` 时一切正常，但安装到 `C:\Program Files...` 时，却报：
+
+```
+System.UnauthorizedAccessException: 拒绝访问 (0x80070005 (E_ACCESSDENIED))
+   at Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(...)
+```
+
+原因是：WebView2 默认会在 **exe 目录**（即安装目录）下生成缓存文件夹 `EBWebView`，但 `Program Files` 目录需要管理员权限写入，应用直接报错。
+
+---
+
+## 4. 为 WebView2 显式指定 UserDataFolder
+
+✅ 最终解决方法：
+在代码里指定 WebView2 的 `UserDataFolder` 到用户的 **AppData** 路径，确保有写权限。
+
+示例代码：
+
+```csharp
+using Microsoft.Web.WebView2.WinForms;
+using Microsoft.Web.WebView2.Core;
+using System.IO;
+
+public MainForm()
+{
+    InitializeComponent();
+
+    // 指定一个用户可写目录
+    string userDataFolder = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "cqyjj_yanjingjingshilb"
+    );
+
+    webView21.CreationProperties = new CoreWebView2CreationProperties()
+    {
+        UserDataFolder = userDataFolder
+    };
+
+    // 初始化 WebView2
+    webView21.EnsureCoreWebView2Async();
+}
+```
+
+这样 WebView2 的缓存将写入：
+
+```
+C:\Users\<用户名>\AppData\Local\cqyjj_yanjingjingshilb
+```
+
+无论安装在 C 盘还是 D 盘，都能正常运行，彻底解决 `UnauthorizedAccessException`。
+
+---
+
+## 5. 发布安装包流程
+
+1. 切换到 **Release** 模式。
+2. 在 **WinForms 项目**（如 `eye-win-winform`）中更改版本号，并根据 `ClickOnceProfile.pubxml` 进行发布，得到待打包的发布文件。
+3. 在 **安装项目**（如 `Se.Utils.Mercado.ClientInstaller`）中切换到 Release，更改版本号，右键选择 **重新生成**。
+4. 生成 MSI 安装包。
+
+---
+
+## 6. 推荐工具
+
+* **Microsoft Visual Studio Installer Projects**（用于生成 MSI 安装包）
+  👉 [下载地址](https://marketplace.visualstudio.com/items?itemName=VisualStudioClient.MicrosoftVisualStudio2022InstallerProjects)
+
+---
+
+## 总结
+
+在使用 VS2022 打包 .NET 8 WinForms 应用时，需要特别注意以下几点：
+
+1. **不要使用主输出** —— .NET 8 下主输出是 DLL，而不是 EXE。必须用 **发布版本（Publish Profile/ClickOnce）** 的产物来打包。
+2. **WebView2 推荐配置为静态加载**：在 `.csproj` 添加
+
+   ```xml
+   <WebView2LoaderPreference>Static</WebView2LoaderPreference>
+   ```
+
+   避免单独复制 `WebView2Loader.dll`。
+3. **为 WebView2 设置 UserDataFolder** 到用户 AppData，避免安装在 `Program Files` 时的权限问题。
+4. **打包流程**：先发布 WinForms 项目，再构建安装项目，得到最终 MSI 包。
+
+经过这些调整后，应用 MSI 安装包可以在 C 盘、D 盘等目录正常安装并运行，WebView2 功能也完全可用，部署体验更顺畅。
