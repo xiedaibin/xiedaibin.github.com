@@ -1,0 +1,121 @@
+---
+layout: page
+title: Docker Compose 多副本与负载均衡解析
+category: 技术
+tags: docker
+---
+
+在日常使用 Docker Compose 时，很多人会遇到这样的问题：
+
+* 如何像 Kubernetes 一样运行多个副本？
+* 多个副本之间是否会自动实现负载均衡？
+* 不同版本的 Docker Compose 在这方面有什么区别？
+
+本文将结合实际测试，总结 Docker Compose 的多副本与负载均衡机制。
+
+---
+
+## 1. Docker Compose 多副本的实现
+
+在 Compose 文件中，可以通过以下两种方式启动多个副本：
+
+### 方法一：使用 `deploy.replicas`
+
+```yaml
+services:
+  identityserver:
+    image: myapp/identityserver:latest
+    expose:
+      - "5000"
+    deploy:
+      replicas: 2
+```
+
+### 方法二：使用 `--scale`
+
+```bash
+docker compose up --scale identityserver=2 -d
+```
+
+两者效果类似，都会启动多个相同镜像的容器。
+
+---
+
+## 2. Compose v1 与 v2 的差异
+
+### Compose v1（已停止维护）
+
+* 需要 `docker-compose` 命令。
+* `deploy.replicas` 在非 Swarm 模式下无效，只能用 `--scale`。
+* 服务名 DNS 只解析到单个容器 IP。
+* **没有负载均衡**。
+
+### Compose v2（推荐使用）
+
+* 集成到 `docker` CLI，命令是 `docker compose`。
+* 支持在 Compose 文件中直接写 `deploy.replicas`。
+* 服务名 DNS 会解析为多个容器 IP。
+* 使用 **DNS 轮询（RR-DNS）**，从而实现了基础的负载均衡。
+
+---
+
+## 3. 验证 Compose v2 的负载均衡
+
+我们可以通过 `getent hosts` 来验证服务名是否会解析为多个 IP：
+
+```bash
+docker exec -it <某个容器> getent hosts identityserver
+```
+
+如果输出结果中有多个 IP，例如：
+
+```
+172.19.0.3   identityserver
+172.19.0.4   identityserver
+```
+
+说明当前环境是 Compose v2，并且支持 **DNS 轮询**。在容器内部访问 `http://identityserver:5000` 时，请求会被分发到不同副本。
+
+---
+
+## 4. 负载均衡的局限性
+
+需要注意的是，Compose v2 提供的只是最基础的 **DNS 轮询负载均衡**，其特性包括：
+
+* 没有健康检查（故障副本仍可能被解析到）。
+* 没有会话保持（同一客户端请求可能落到不同副本）。
+* 仅限单机 Docker 网络，不支持跨主机调度。
+
+如果需要更智能的流量调度与高可用，需要使用 **Docker Swarm** 或 **Kubernetes**。
+
+---
+
+## 5. 总结
+
+* Docker Compose **v1**：多副本只能用 `--scale`，没有负载均衡。
+* Docker Compose **v2**：支持 `deploy.replicas`，并通过 DNS 轮询实现了简单负载均衡。
+* 验证方法：`docker exec -it <容器> getent hosts <服务名>`。
+* 高级负载均衡需求 → 使用 **Swarm/K8s/反向代理**。
+
+---
+
+## 6. 对比表
+
+| 特性         | Compose v1 | Compose v2（推荐）                | Docker Swarm        | Kubernetes（K8s）           |
+| ---------- | ---------- | ----------------------------- | ------------------- | ------------------------- |
+| 多副本配置方式    | `--scale`  | `deploy.replicas` / `--scale` | `deploy.replicas`   | `replicas` (Deployment)   |
+| 服务名 DNS 解析 | 单 IP       | 多 IP（RR-DNS）                  | VIP + 内置负载均衡        | ClusterIP / Service LB    |
+| 负载均衡方式     | ❌ 无        | ✅ DNS 轮询（RR-DNS）              | ✅ 内置负载均衡（基于 VIP）    | ✅ kube-proxy / CNI LB     |
+| 健康检查       | 手动实现       | ❌ 无                           | ✅ 内置                | ✅ 内置                      |
+| 会话保持       | ❌ 无        | ❌ 无                           | ⚠️ 部分支持（IPVS 模式）    | ✅ Service + StickySession |
+| 跨主机支持      | ❌ 无        | ❌ 无                           | ✅ Overlay 网络支持      | ✅ CNI 网络插件支持              |
+| 使用场景       | 单机开发测试     | 单机部署，轻量级多副本                   | 多主机 Docker 集群，轻量级编排 | 企业级生产编排                   |
+
+---
+
+✍️ 通过对比我们可以看到：
+
+* **Compose v2** 相比 v1 已经大幅提升，单机多副本部署时能满足基础负载需求。
+* **Swarm/K8s** 才能提供真正的集群级负载均衡、健康检查和高可用。
+
+---
