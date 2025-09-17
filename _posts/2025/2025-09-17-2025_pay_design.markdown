@@ -1,0 +1,173 @@
+---
+layout: page
+title: 高并发支付系统的账户冻结与异步处理优化
+category: 技术
+tags: 系统设计
+---
+
+在高并发支付场景中，单用户多笔支付容易成为系统瓶颈，尤其是在账户余额调整和账务记录写入时。本文结合实践经验和支付宝、微信支付的设计思路，分享一种 **“冻结金额 + 异步队列”** 的优化方案，并介绍数据库设计和异常处理策略。
+
+---
+
+## 1. 问题背景
+
+传统支付流程：
+
+1. 用户发起支付请求；
+2. 系统锁定用户账户（分布式锁）；
+3. 修改账户余额；
+4. 写入账务流水；
+5. 释放锁。
+
+高并发情况下，问题表现为：
+
+* 分布式锁竞争严重，请求排队等待；
+* 多笔支付同时处理导致延迟增加，下游服务可能超时；
+* 系统吞吐量下降。
+
+---
+
+## 2. 异步队列 + 冻结金额方案
+
+### 2.1 核心思路
+
+1. 用户支付时，先检查账户可用余额；
+2. 冻结相应金额（占用资金，不立即扣减总余额）；
+3. 支付请求立即返回成功；
+4. 后台异步队列消费冻结记录，执行正式扣款并写账务流水；
+5. 用户取消或支付失败时，可解冻冻结金额。
+
+---
+
+### 2.2 冻结金额流程示意图
+
+```text
+用户支付
+    |
+冻结金额（原子操作，状态=PENDING）
+    |
+立即返回支付成功
+    |
+    +--> 异步队列消费
+          |
+          状态PROCESSING
+          |
+          扣减总余额
+          |
+          状态COMPLETED
+    |
+用户退款/撤销支付
+    |
+    +--> 检查冻结金额状态
+          - PENDING -> 标记CANCELLED -> 解冻金额
+          - PROCESSING -> 等待队列处理完成 / 幂等处理
+          - COMPLETED -> 执行真正退款操作
+```
+
+* **冻结金额（PENDING）**：占用资金，但不改变总余额；
+* **异步队列消费**：消费冻结记录，扣减总余额，状态流转 PENDING → PROCESSING → COMPLETED；
+* **退款/撤销支付**：根据冻结状态处理，保证资金安全和一致性。
+
+---
+
+## 3. 数据库设计
+
+### 3.1 用户账户表（account）
+
+```sql
+CREATE TABLE account (
+    user_id BIGINT PRIMARY KEY,
+    total_balance DECIMAL(18,2) NOT NULL DEFAULT 0,
+    frozen_balance DECIMAL(18,2) NOT NULL DEFAULT 0,
+    available_balance DECIMAL(18,2) NOT NULL DEFAULT 0,
+    version BIGINT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+* `frozen_balance` 和 `available_balance` 冗余存储，提高高并发查询性能；
+* `version` 用作乐观锁，防止并发写冲突。
+
+### 3.2 冻结交易表（account\_frozen\_transaction）
+
+```sql
+CREATE TABLE account_frozen_transaction (
+    frozen_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    amount DECIMAL(18,2) NOT NULL,
+    status ENUM('PENDING','PROCESSING','COMPLETED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+    related_order VARCHAR(64) NOT NULL,
+    expire_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_user_order (user_id, related_order)
+);
+```
+
+* 记录每笔冻结资金状态；
+* `expire_at` 用于异常兜底自动解冻。
+
+### 3.3 账务流水表（account\_log）
+
+```sql
+CREATE TABLE account_log (
+    log_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    change_amount DECIMAL(18,2) NOT NULL,
+    balance_after DECIMAL(18,2) NOT NULL,
+    type ENUM('DEBIT','CREDIT','FREEZE','UNFREEZE') NOT NULL,
+    related_order VARCHAR(64) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+* 记录账户余额最终变动，保证审计和账务合规。
+
+---
+
+## 4. 冻结金额 vs 财务流水
+
+| 区别      | 冻结金额                                         | 财务流水                |
+| ------- | -------------------------------------------- | ------------------- |
+| 目的      | 临时占用资金，防止重复使用                                | 记录最终资金变动            |
+| 生命周期    | PENDING → PROCESSING → COMPLETED / CANCELLED | 一旦生成不可修改，冲正需补记      |
+| 是否改变总余额 | 否，仅影响可用余额                                    | 是，改变 total\_balance |
+| 是否可解冻   | 是                                            | 否                   |
+
+**总结**：冻结金额是“过程控制”，财务流水是“结果记录”，两者互补而非替代。
+
+---
+
+## 5. 异常处理与自动解冻
+
+* `expire_at` 用于兜底冻结金额：
+
+  * 用户下单未支付或取消订单；
+  * 后台异步处理异常（队列丢失、服务挂掉）。
+* 定时任务扫描 PENDING 状态且超时的冻结记录：
+
+  * 自动解冻，释放 `available_balance`；
+  * 状态更新为 CANCELLED。
+* 扣款和解冻通过状态机互斥，保证资金安全。
+
+---
+
+## 6. 高并发优化策略
+
+1. **冻结金额 + 异步队列**，快速返回支付成功；
+2. **账户表冗余字段**，减少实时聚合查询压力；
+3. **冻结表状态管理**，保证扣款与解冻互斥、幂等；
+4. **定时任务 + expire\_at**，兜底异常冻结资金；
+5. **流水表记录最终账务变动**，保证审计合规；
+6. **同一用户消息顺序处理**，保证资金操作一致性。
+
+---
+
+## 7. 总结
+
+通过“冻结金额 + 异步队列 + 状态管理 + 自动解冻 + 冗余字段”设计：
+
+* 避免分布式锁竞争，提升系统吞吐量；
+* 快速返回支付成功，提高用户体验；
+* 保证资金安全和账务一致性；
