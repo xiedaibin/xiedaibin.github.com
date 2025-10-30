@@ -1,0 +1,133 @@
+---
+layout: page
+title: 在 Ocelot 网关中实现可重复读取的请求 Body
+category: 技术
+tags: net
+---
+
+在使用 **Ocelot** 作为 API 网关时，我们经常需要在网关层读取请求体（`Body`）做一些事情，比如：
+
+* 记录请求日志
+* 验签（Signature 验证）
+* 数据解密或敏感字段过滤
+
+但默认情况下，一旦网关中读取了 `HttpRequest.Body`，这个流就被“消耗”掉了，下游服务将无法再读取到请求体。
+本文将介绍如何在 Ocelot 中开启“**可重复读取的请求 Body**”，让网关和下游服务都能正确读取到 Body 内容。
+
+---
+
+## 一、为什么默认不能重复读取 Body？
+
+在 ASP.NET Core 中，`HttpRequest.Body` 是一个 **不可重复读取的流**（forward-only stream）。
+也就是说，一旦有人（比如中间件）调用 `ReadAsync` 读取完，流的位置就到了末尾，
+下一个中间件或 Ocelot 转发时就会读到一个空的请求体。
+
+Ocelot 作为一个基于 ASP.NET Core 的中间件框架，自然也会受此影响。
+
+---
+
+## 二、解决思路：开启请求体缓存（EnableBuffering）
+
+ASP.NET Core 提供了一个非常方便的方法 ——
+`HttpRequest.EnableBuffering()`，它能让请求体变成“可回读”的流。
+
+实现思路很简单：
+
+1. 在 Ocelot 之前添加一个中间件；
+2. 调用 `context.Request.EnableBuffering()`；
+3. 如果需要读取 body，就在读取后将流位置重置到 0；
+4. 最后再调用 `await next()` 交给 Ocelot 处理。
+
+---
+
+## 三、示例：在 Startup 中启用可重复读取
+
+```csharp
+public class Startup
+{
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        // 在 Ocelot 之前添加自定义中间件
+        app.Use(async (context, next) =>
+        {
+            // 允许请求体被多次读取
+            context.Request.EnableBuffering();
+
+            // 如果需要读取请求体内容
+            using (var reader = new StreamReader(
+                context.Request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true))
+            {
+                var body = await reader.ReadToEndAsync();
+
+                // 读取完毕后一定要重置流的位置！
+                context.Request.Body.Position = 0;
+
+                // 这里可以进行日志、验签或数据预处理
+                Console.WriteLine($"请求 Body 内容: {body}");
+            }
+
+            await next(); // 继续交给 Ocelot
+        });
+
+        // 注册 Ocelot 网关
+        app.UseOcelot().Wait();
+    }
+}
+```
+
+### 关键点说明
+
+| 操作                                  | 说明                    |
+| ----------------------------------- | --------------------- |
+| `EnableBuffering()`                 | 启用请求体缓存功能             |
+| `leaveOpen: true`                   | 避免关闭原始流               |
+| `context.Request.Body.Position = 0` | 让 Ocelot 还能读取到完整 Body |
+| 放在 `UseOcelot()` 之前                 | 否则 Ocelot 可能已经读取 body |
+
+---
+
+## 四、在 DelegatingHandler 中读取下游请求体
+
+如果你希望在请求被转发到下游时，在 **DelegatingHandler** 中再次读取 body，也完全没问题。
+
+示例如下：
+
+```csharp
+public class LogRequestHandler : DelegatingHandler
+{
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        if (request.Content != null)
+        {
+            var body = await request.Content.ReadAsStringAsync();
+            Console.WriteLine($"下游请求 Body: {body}");
+        }
+
+        return await base.SendAsync(request, cancellationToken);
+    }
+}
+```
+
+在 `ocelot.json` 中注册：
+
+```json
+"DelegatingHandlers": [
+  "LogRequestHandler"
+]
+```
+
+这样，你就能在 Ocelot 转发请求时读取到下游请求体，而不会影响转发行为。
+
+---
+
+## 五、完整实现总结
+
+| 目标                 | 关键实现方式                                |
+| ------------------ | ------------------------------------- |
+| 允许 Ocelot 读取请求体    | 使用 `EnableBuffering()`                |
+| 确保下游还能读取到 body     | 重置流位置 `Body.Position = 0`             |
+| 日志/验签前读取 body      | 使用 `StreamReader` 且 `leaveOpen: true` |
+| 下游 Handler 读取 body | `request.Content.ReadAsStringAsync()` |
+| 避免空 Body 问题        | 注意中间件顺序和流重置位置                         |
+
+---
