@@ -1,0 +1,447 @@
+---
+layout: page
+title: ASP.NET Core 实现标签图片批量打包下载功能
+category: 技术
+tags: net
+---
+
+## 业务场景
+
+在物流标签管理系统中，我们需要实现一个功能：根据计划编号批量下载标签图片。具体需求如下：
+
+- 每个计划包含多个箱子
+- 每个箱子需要贴多张标签
+- 标签图片存储在远程服务器，提供URL地址
+- 需要将图片按 `计划编号/箱号/标签图片` 的目录结构打包成ZIP文件
+- 直接返回文件流给前端下载
+
+## 技术难点
+
+### 1. 内存占用问题
+
+如果简单地将所有图片下载到内存，再打包成ZIP，当图片数量较多时会导致：
+- 内存占用过高（100张5MB图片 ≈ 1GB内存）
+- 服务器压力大
+- 可能导致OOM（内存溢出）
+
+### 2. ASP.NET Core 限制
+
+- 默认禁用同步I/O操作
+- ABP Framework的自动验证机制
+- 响应压缩中间件冲突
+
+## 解决方案
+
+### 核心思路：流式处理
+
+采用**边下载边压缩边传输**的策略，避免大量数据在内存中堆积：
+
+1. 使用 `HttpCompletionOption.ResponseHeadersRead` 流式下载图片
+2. 直接将下载流复制到ZIP Entry流中
+3. ZIP文件直接写入HTTP响应流
+4. 内存占用控制在80KB缓冲区级别
+
+## 完整实现
+
+### 1. 数据模型
+
+```csharp
+// 计划任务模型
+public class PlanLabelTask
+{
+    public string PlanNo { get; set; }  // 计划编号
+    public List<BoxLabelTask> Boxes { get; set; }  // 箱子列表
+}
+
+// 箱子标签模型
+public class BoxLabelTask
+{
+    public string BoxNo { get; set; }  // 箱号
+    public List<string> LabelUrls { get; set; }  // 标签URL列表
+}
+```
+
+### 2. 服务层实现
+
+```csharp
+public interface ILabelPackService
+{
+    Task StreamLabelsToZipAsync(
+        List<PlanLabelTask> plans,
+        Stream outputStream,
+        CancellationToken cancellationToken = default);
+}
+
+public class LabelPackService : ILabelPackService
+{
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<LabelPackService> _logger;
+    private const int BufferSize = 81920; // 80KB缓冲区
+
+    public LabelPackService(
+        IHttpClientFactory httpClientFactory,
+        ILogger<LabelPackService> logger)
+    {
+        _httpClientFactory = httpClientFactory;
+        _logger = logger;
+    }
+
+    public async Task StreamLabelsToZipAsync(
+        List<PlanLabelTask> plans,
+        Stream outputStream,
+        CancellationToken cancellationToken = default)
+    {
+        using var archive = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: true);
+        var httpClient = _httpClientFactory.CreateClient();
+        httpClient.Timeout = TimeSpan.FromMinutes(10);
+
+        foreach (var plan in plans)
+        {
+            var sanitizedPlanNo = SanitizeFolderName(plan.PlanNo);
+
+            if (plan.Boxes == null || !plan.Boxes.Any())
+                continue;
+
+            foreach (var box in plan.Boxes)
+            {
+                var sanitizedBoxNo = SanitizeFolderName(box.BoxNo);
+
+                if (box.LabelUrls == null || !box.LabelUrls.Any())
+                    continue;
+
+                for (int i = 0; i < box.LabelUrls.Count; i++)
+                {
+                    try
+                    {
+                        var labelUrl = box.LabelUrls[i];
+
+                        // 🔑 关键：流式下载，不一次性加载到内存
+                        using var response = await httpClient.GetAsync(
+                            labelUrl,
+                            HttpCompletionOption.ResponseHeadersRead,
+                            cancellationToken);
+                        response.EnsureSuccessStatusCode();
+
+                        var extension = GetFileExtension(labelUrl, response);
+                        var entryName = $"{sanitizedPlanNo}/{sanitizedBoxNo}/标签_{i + 1}{extension}";
+
+                        var entry = archive.CreateEntry(entryName, CompressionLevel.Optimal);
+
+                        // 🔑 关键：流式复制，不占用大量内存
+                        using var entryStream = entry.Open();
+                        using var imageStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+                        await imageStream.CopyToAsync(entryStream, BufferSize, cancellationToken);
+
+                        _logger.LogInformation($"已添加: {entryName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"处理标签失败: 计划={plan.PlanNo}, 箱号={box.BoxNo}");
+                    }
+                }
+            }
+        }
+    }
+
+    private string SanitizeFolderName(string folderName)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        foreach (var c in invalidChars)
+        {
+            folderName = folderName.Replace(c, '_');
+        }
+        return folderName;
+    }
+
+    private string GetFileExtension(string url, HttpResponseMessage response)
+    {
+        try
+        {
+            // 优先从Content-Type获取
+            if (response.Content.Headers.ContentType?.MediaType != null)
+            {
+                var mediaType = response.Content.Headers.ContentType.MediaType;
+                return mediaType switch
+                {
+                    "image/jpeg" => ".jpg",
+                    "image/png" => ".png",
+                    "image/gif" => ".gif",
+                    "image/webp" => ".webp",
+                    "image/bmp" => ".bmp",
+                    _ => Path.GetExtension(new Uri(url).AbsolutePath)
+                };
+            }
+
+            var extension = Path.GetExtension(new Uri(url).AbsolutePath);
+            return string.IsNullOrEmpty(extension) ? ".jpg" : extension;
+        }
+        catch
+        {
+            return ".jpg";
+        }
+    }
+}
+```
+
+### 3. Controller实现
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class LabelController : ControllerBase
+{
+    private readonly ILabelPackService _labelPackService;
+    private readonly ILogger<LabelController> _logger;
+
+    public LabelController(
+        ILabelPackService labelPackService,
+        ILogger<LabelController> logger)
+    {
+        _labelPackService = labelPackService;
+        _logger = logger;
+    }
+
+    [HttpPost("pack")]
+    [DisableValidation]  // ⚠️ 禁用ABP验证
+    [DisableRequestSizeLimit]  // ⚠️ 允许大文件
+    public async Task<IActionResult> PackLabels(
+        [FromBody] List<PlanLabelTask> plans,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (plans == null || !plans.Any())
+            {
+                return BadRequest("计划列表不能为空");
+            }
+
+            // ⚠️ 启用同步I/O（ZipArchive需要）
+            var syncIOFeature = HttpContext.Features
+                .Get<IHttpBodyControlFeature>();
+            if (syncIOFeature != null)
+            {
+                syncIOFeature.AllowSynchronousIO = true;
+            }
+
+            var totalBoxes = plans.Sum(p => p.Boxes?.Count ?? 0);
+            var totalLabels = plans.Sum(p => p.Boxes?.Sum(b => b.LabelUrls?.Count ?? 0) ?? 0);
+            _logger.LogInformation(
+                $"开始打包标签，共{plans.Count}个计划，{totalBoxes}个箱子，{totalLabels}个标签");
+
+            var fileName = $"Labels_{DateTime.Now:yyyyMMddHHmmss}.zip";
+
+            // 设置响应头
+            Response.ContentType = "application/zip";
+            Response.Headers.Append("Content-Disposition",
+                $"attachment; filename=\"{fileName}\"");
+
+            // 🔑 关键：直接流式写入HTTP响应
+            await _labelPackService.StreamLabelsToZipAsync(
+                plans,
+                Response.Body,
+                cancellationToken);
+
+            return new EmptyResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "打包标签失败");
+
+            if (Response.HasStarted)
+            {
+                _logger.LogError("响应已开始，无法发送错误信息到客户端");
+                return new EmptyResult();
+            }
+
+            return StatusCode(500, "打包标签时发生错误");
+        }
+    }
+}
+```
+
+### 4. Program.cs配置
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// ⚠️ 启用同步I/O（ZipArchive需要）
+builder.Services.Configure<KestrelServerOptions>(options =>
+{
+    options.AllowSynchronousIO = true;
+});
+
+// 如果部署在IIS上
+builder.Services.Configure<IISServerOptions>(options =>
+{
+    options.AllowSynchronousIO = true;
+});
+
+// 注册服务
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ILabelPackService, LabelPackService>();
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.MapControllers();
+app.Run();
+```
+
+## 使用示例
+
+### 前端请求
+
+```json
+POST /api/label/pack
+Content-Type: application/json
+
+[
+  {
+    "planNo": "PLAN2025001",
+    "boxes": [
+      {
+        "boxNo": "BOX001",
+        "labelUrls": [
+          "https://example.com/label1.jpg",
+          "https://example.com/label2.png"
+        ]
+      },
+      {
+        "boxNo": "BOX002",
+        "labelUrls": [
+          "https://example.com/label3.jpg"
+        ]
+      }
+    ]
+  }
+]
+```
+
+### 生成的ZIP结构
+
+```
+Labels_20250103120000.zip
+├── PLAN2025001/
+│   ├── BOX001/
+│   │   ├── 标签_1.jpg
+│   │   └── 标签_2.png
+│   └── BOX002/
+│       └── 标签_1.jpg
+```
+
+## 性能对比
+
+| 场景 | 传统方案内存占用 | 流式方案内存占用 | 优化效果 |
+|------|----------------|----------------|----------|
+| 10张 × 5MB | ~100MB | ~80KB | 节省99.9% |
+| 100张 × 5MB | ~1GB | ~80KB | 节省99.99% |
+| 1000张 × 5MB | ~10GB | ~80KB | 节省99.999% |
+
+## 常见问题
+
+### 1. 出现 "Synchronous operations are disallowed" 错误
+
+**原因**：ASP.NET Core 默认禁用同步I/O操作
+
+**解决**：在 `Program.cs` 中添加：
+```csharp
+builder.Services.Configure<KestrelServerOptions>(options =>
+{
+    options.AllowSynchronousIO = true;
+});
+```
+
+### 2. 出现 "Property accessor 'Length' on object threw exception" 错误
+
+**原因**：ABP Framework的验证机制试图验证流对象
+
+**解决**：在Controller方法上添加 `[DisableValidation]` 特性
+
+### 3. ZIP文件损坏
+
+**原因**：响应压缩中间件对ZIP进行了二次压缩
+
+**解决**：配置响应压缩排除ZIP文件：
+```csharp
+builder.Services.AddResponseCompression(options =>
+{
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes
+        .Where(x => x != "application/zip");
+});
+```
+
+## 进阶优化
+
+### 1. 添加进度反馈
+
+使用SignalR实时推送打包进度：
+
+```csharp
+// 在服务中注入IHubContext
+private readonly IHubContext<ProgressHub> _hubContext;
+
+// 下载时推送进度
+await _hubContext.Clients.User(userId)
+    .SendAsync("ProgressUpdate", new {
+        current = i,
+        total = totalCount
+    });
+```
+
+### 2. 后台任务处理
+
+对于超大任务，使用后台队列：
+
+```csharp
+[HttpPost("pack-async")]
+public async Task<IActionResult> PackLabelsAsync([FromBody] List<PlanLabelTask> plans)
+{
+    var taskId = Guid.NewGuid().ToString();
+
+    // 加入后台队列
+    await _backgroundTaskQueue.QueueBackgroundWorkItemAsync(async token =>
+    {
+        await ProcessLargePackTask(taskId, plans, token);
+    });
+
+    return Ok(new { taskId, message = "任务已提交" });
+}
+```
+
+### 3. 添加限流
+
+防止恶意请求：
+
+```csharp
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("pack", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 10;
+    });
+});
+```
+
+## 总结
+
+通过流式处理，我们成功实现了：
+
+✅ **低内存占用**：从GB级别降低到KB级别
+✅ **高并发支持**：多用户同时下载互不影响
+✅ **实时传输**：边下载边传输，用户体验好
+✅ **异常处理**：单个图片失败不影响整体流程
+
+这套方案已在生产环境稳定运行，处理过单次1000+图片的打包任务，内存占用始终保持在100MB以内。
+
+## 参考资料
+
+- [System.IO.Compression 文档](https://learn.microsoft.com/en-us/dotnet/api/system.io.compression)
+- [ASP.NET Core 流式传输](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/streaming)
+- [HttpClient 最佳实践](https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines)
+
+---
+
+**项目环境**：.NET 8 + ASP.NET Core + ABP Framework
