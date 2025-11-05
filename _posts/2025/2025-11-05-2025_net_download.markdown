@@ -1,0 +1,210 @@
+---
+layout: page
+title: ASP.NET Core 实现带签名的安全导出下载（支持复杂 JSON 参数）
+category: 技术
+tags: net
+---
+
+在日常后台系统中，“导出数据”几乎是标配功能之一。
+然而随着导出逻辑越来越复杂，比如筛选条件、时间区间、分页参数、字段选择等，传统的“前端 POST 请求 + Blob 下载”方式就开始显得笨重。
+
+本文将带你一步步实现一个**高安全性、可扩展、支持复杂 JSON 参数的导出下载机制**，
+并且可以实现“点击即下载”的顺畅体验。
+
+---
+
+## 🧩 一、常见导出方式的问题
+
+### 1️⃣ 直接返回文件流（Blob）
+
+前端通过 `axios.post()` 获取 `blob`，然后手动触发下载：
+
+```js
+axios({
+  url: '/api/export',
+  method: 'post',
+  data: params,
+  responseType: 'blob'
+})
+```
+
+**问题：**
+
+* 前端需要等待整个文件生成完再保存；
+* 无法显示“立即下载”的体验；
+* 对大文件极不友好（需占用大量内存）；
+* 链接不能直接分享或复用。
+
+---
+
+## ✅ 二、目标方案
+
+我们的目标是实现：
+
+> 支持复杂 JSON 参数、带权限验证、临时有效、浏览器直接下载文件，而不占用前端内存。
+
+实现思路是采用“两步式导出机制”：
+
+1️⃣ **准备阶段**
+前端上传导出参数（复杂 JSON），后端校验并生成一个临时签名下载链接。
+
+2️⃣ **下载阶段**
+前端拿到签名 URL 后直接 `window.open(url)`，浏览器立即触发下载。
+后端通过签名验证和缓存参数，实时生成导出内容。
+
+---
+
+## ✅ 三、后端实现（ASP.NET Core）
+
+### Step 1️⃣：准备接口（接收参数并生成签名链接）
+
+```csharp
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ExportController : ControllerBase
+{
+    private const string SecretKey = "ExportDownloadSecret";
+    private static readonly Dictionary<string, string> ExportParameterCache = new();
+
+    [HttpPost("prepare")]
+    public IActionResult PrepareExport([FromBody] ExportRequestDto request)
+    {
+        var exportId = Guid.NewGuid().ToString("N");
+
+        // 缓存参数（实际可存 Redis 或数据库）
+        ExportParameterCache[exportId] = System.Text.Json.JsonSerializer.Serialize(request);
+
+        var expire = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds();
+        var sig = Sign($"{exportId}:{expire}");
+
+        var url = $"{Request.Scheme}://{Request.Host}/api/export/download?id={exportId}&exp={expire}&sig={sig}";
+        return Ok(new { url });
+    }
+
+    private string Sign(string input)
+    {
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(SecretKey));
+        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(input));
+        return Convert.ToBase64String(hash).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    }
+}
+
+public class ExportRequestDto
+{
+    public string Type { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+    public string[] SelectedColumns { get; set; }
+    public int? UserId { get; set; }
+}
+```
+
+---
+
+### Step 2️⃣：下载接口（校验签名并动态生成文件）
+
+```csharp
+[HttpGet("download")]
+public IActionResult Download(string id, long exp, string sig)
+{
+    var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    if (now > exp)
+        return BadRequest("链接已过期");
+
+    var expectedSig = Sign($"{id}:{exp}");
+    if (sig != expectedSig)
+        return Unauthorized("签名无效");
+
+    if (!ExportParameterCache.TryGetValue(id, out var json))
+        return NotFound("导出任务不存在或已过期");
+
+    var dto = System.Text.Json.JsonSerializer.Deserialize<ExportRequestDto>(json);
+
+    // 动态生成 Excel 文件（示例）
+    var bytes = GenerateExcel(dto);
+    var fileName = $"{dto.Type}-{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+
+    return File(bytes,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        fileName);
+}
+
+private byte[] GenerateExcel(ExportRequestDto dto)
+{
+    using var ms = new MemoryStream();
+    using var writer = new StreamWriter(ms);
+    writer.WriteLine("ColumnA,ColumnB,ColumnC");
+    writer.WriteLine($"From {dto.StartTime} To {dto.EndTime}");
+    writer.WriteLine($"Selected: {string.Join(",", dto.SelectedColumns)}");
+    writer.Flush();
+    return ms.ToArray();
+}
+```
+
+---
+
+## ✅ 四、前端实现（Vue 示例）
+
+```js
+async function exportData() {
+  const exportParams = {
+    type: 'student-report',
+    startTime: '2025-11-01T00:00:00Z',
+    endTime: '2025-11-05T00:00:00Z',
+    selectedColumns: ['Name', 'Score', 'Class'],
+    userId: 123,
+  };
+
+  // Step1: 先提交参数，获取签名下载 URL
+  const { data } = await axios.post('/api/export/prepare', exportParams);
+
+  // Step2: 打开下载链接（浏览器直接下载）
+  window.open(data.url);
+}
+```
+
+**效果：**
+
+* 导出参数复杂无妨；
+* 链接 5 分钟后自动失效；
+* 用户点击即触发下载；
+* 不需等待 Blob 加载；
+* 文件实时生成，无需提前存储。
+
+---
+
+## ✅ 五、安全与优化建议
+
+| 优化方向            | 说明                                              |
+| --------------- | ----------------------------------------------- |
+| 🔐 **绑定用户 ID**  | 在签名中加入用户标识：`Sign($"{userId}:{exportId}:{exp}")` |
+| 🧠 **异步导出**     | 对大数据集，建议使用后台任务（如 Hangfire）异步生成文件                |
+| 🕒 **缓存清理**     | 定时清理过期导出参数或生成的文件                                |
+| ☁️ **文件存储**     | 对大型导出可先存入 OSS / S3，返回签名下载链接                     |
+| ⚙️ **HTTPS 强制** | 防止签名参数被中间人窃取                                    |
+
+---
+
+## ✅ 六、方案优点总结
+
+| 特点             | 说明             |
+| -------------- | -------------- |
+| ✅ 支持复杂 JSON 参数 | 不受 URL 长度限制    |
+| ✅ 安全可靠         | 签名验证 + 短期有效    |
+| ✅ 点击即下         | 浏览器自动处理下载，不占内存 |
+| ✅ 易扩展          | 可对接异步任务、OSS 等  |
+| ✅ 轻量实现         | 无需引入第三方库       |
+
+---
+
+## ✅ 七、总结
+
+这种“两步式导出 + 签名下载”的模式，
+结合了 **安全性、易用性和性能** 的优点，非常适合管理后台或 SaaS 系统中的导出功能。
+
+前端不必等待 blob 文件生成，后端也避免了直接暴露接口或 token，
+实现了真正意义上的「**安全、即点即下、可控导出**」。
