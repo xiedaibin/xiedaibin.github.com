@@ -1,0 +1,576 @@
+---
+layout: page
+title: 雪花算法升级实践：从 Snowflake 到 SnowflakeV2，确保 ID 增长不溢出
+category: 技术
+tags: net
+---
+
+
+### 一、问题背景：默认起始时间导致的潜在风险
+
+雪花算法（Snowflake）是一种常见的分布式 ID 生成方案。它通过将 64 位的 long 型整数拆分为不同字段（时间戳、机器 ID、序列号），在高并发分布式环境中生成全局唯一且有序的 ID。
+
+由于 **使用NewLife未设置开始时间，默认使用1970作为纪元时间，并已经产生很多数据** ，导致无法直接在改动NewLife的纪元时间,到达延长雪花算法的使用。
+
+NewLife 框架提供的 `Snowflake` 实现默认使用 **1970-01-01 作为起始时间**，这意味着：
+
+* 时间戳占 41 位，可支持约 69 年（2^41 毫秒 ≈ 69 年）；
+* 因此，默认配置的有效期约为 **1970 ~ 2040 年**；
+* 超过 2040 年后，时间戳溢出，ID 将出现重复或倒退风险。
+
+由于当前时间已经来到 **2025 年**，为避免系统在未来 15 年内因雪花算法时间耗尽而出现数据主键冲突问题，必须尽快进行升级处理。
+
+更关键的是：
+该 ID 被用作 **数据库主键**，因此新算法必须确保：
+
+1. 新生成的 ID **比旧 ID 大**（以便迁移时保持递增性）；
+2. ID **仍然唯一且有序**；
+3. 与原有结构兼容，便于平滑替换。
+
+---
+
+### 二、原 Snowflake 算法结构回顾
+
+原始 Snowflake 结构如下：
+
+| 位段    | 位数 | 含义              |
+| ----- | -- | --------------- |
+| 符号位   | 1  | 固定为 0           |
+| 时间戳   | 41 | 从 1970 年开始的毫秒数  |
+| 机器 ID | 10 | 支持最多 1024 节点    |
+| 序列号   | 12 | 每毫秒最多 4096 个 ID |
+
+示意：
+
+```
+0 | 41-bit 时间戳 | 10-bit 机器 ID | 12-bit 序列号
+```
+
+由于时间戳起点固定在 1970 年，系统时间一旦超过 2040 年，将无法再保证新 ID 比旧 ID 大。
+
+---
+
+### 三、升级目标与设计思路
+
+#### ✅ 目标
+
+* 时间起点迁移到 **2025 年**；
+* 新算法生成的 ID 必须 **大于旧算法生成的最大 ID（7392450313976012800）**；
+* 保留原有的 64 位结构，兼容数据库字段类型；
+* 保证分布式场景下的全局唯一性与递增性。
+
+#### 💡 设计思路
+
+为确保新 ID 永远大于旧 ID，可通过 **在最高位增加一个前缀标识位（PrefixValue）** 来实现。
+
+SnowflakeV2 的核心结构定义如下：
+
+| 位段    | 位数 | 含义                               |
+| ----- | -- | -------------------------------- |
+| 固定前缀  | 4  | 二进制 `1101`（十进制 13），确保新 ID 大于旧 ID |
+| 时间戳   | 41 | 从 2025-01-01 起的毫秒数               |
+| 机器 ID | 6  | 支持 64 节点                         |
+| 序列号   | 12 | 每毫秒支持 4096 个 ID                  |
+
+对应二进制结构：
+
+```
+1101 | 41-bit 时间戳 | 6-bit 机器 ID | 12-bit 序列号
+```
+
+---
+
+### 四、关键实现与位运算逻辑
+
+核心代码片段如下：
+
+```csharp
+private static Int64 BuildSnowflakeId(Int64 timestamp, Int32 workerId, Int32 sequence)
+{
+    return ((Int64)PrefixValue << PrefixShift) |
+           ((timestamp & MaxTimestamp) << TimestampShift) |
+           ((Int64)(workerId & MaxWorkerId) << WorkerIdShift) |
+           (Int64)(sequence & MaxSequence);
+}
+```
+
+#### 1️⃣ 各部分解释：
+
+* `PrefixValue`：固定为 `0b1101`（二进制 1101，即十进制 13）；
+* `PrefixShift`：= 41（时间戳位） + 6（机器位） + 12（序列位） = 59；
+* `TimestampShift`：= 6 + 12 = 18；
+* `WorkerIdShift`：= 12；
+* `& MaxXXX`：用于防止位数溢出；
+* `|`：按位或，用于拼接二进制段。
+
+#### 2️⃣ 为什么选 13 作为前缀？
+
+经过计算：
+
+```
+8 << 59 = 4.61168601842739e18  （十进制开头为4）
+13 << 59 = 7.49498978994993e18 （大于 7392450313976012800）
+```
+
+因此，13（二进制 1101）是满足“大于旧 ID”的最小前缀值。
+
+---
+
+---
+
+## 五、SnowflakeV2 源码实现
+
+下面是完整源码，基于 NewLife 框架的 Snowflake 改造而来：
+
+```csharp
+using NewLife.Caching;
+using NewLife.Log;
+using NewLife.Model;
+using NewLife.Security;
+using System;
+using System.Diagnostics;
+using System.Threading;
+
+namespace NewLife.Data;
+
+/// <summary>雪花算法V2。分布式Id生成器，确保ID比原Id大</summary>
+/// <remarks>
+/// Snowflake 已经禁止使用(Snowflake使用时未设置初始时间，默认是1970年,最多支持到2040年,故提前升级处理，避免数字耗尽(数据在递增)后无法处理)，
+/// 使用SnowflakeV2只能通过注入形式获取（初始化时已经单例注入）。不能直接new（直接new会丢失开始时间配置，会默认事件开始）。
+/// SnowflakeV2已经处理最新Id 大于当前时间(2025-12-01)Snowflake.NewId生成的Id。
+/// 改进版雪花算法，确保ID比原Id大
+/// 
+/// 使用一个 64 bit 的 long 型的数字作为全局唯一 id（符号位为0，实际63位有效）
+/// 结构：4bit标识(固定1101) + 41bit时间戳 + 6bit机器 + 12bit序列号
+/// 
+/// 相比标准雪花算法的改进：
+/// - 4位固定标识：1101（二进制），确保ID比原Id大
+/// - 41位时间戳：约69年有效期（与标准雪花算法相同）
+/// - 6位机器ID：支持0-63个节点（原10位支持1024）
+/// - 12位序列号：每毫秒4096个ID（与标准雪花算法相同）
+/// 
+/// 务必请保证SnowflakeV2对象的唯一性，特别在使用XCode等数据中间件时，要确保每张表只有一个Snowflake实例。
+/// </remarks>
+public class SnowflakeV2
+{
+    #region 静态常量
+    /// <summary>标识位数（固定为1000，即8）</summary>
+    private const Int32 PrefixBits = 4;
+
+    /// <summary>固定前缀值（二进制1101）[这里最终得到的值要比原最大Id（7392450313976012800）大]</summary>
+    private const Int32 PrefixValue = 0b1101;
+
+    /// <summary>时间戳位数（保持41位）</summary>
+    private const Int32 TimestampBits = 41;
+
+    /// <summary>工作节点ID位数（压缩到6位）</summary>
+    private const Int32 WorkerIdBits = 6;
+
+    /// <summary>序列号位数（保持12位）</summary>
+    private const Int32 SequenceBits = 12;
+
+    /// <summary>最大工作节点ID（63）</summary>
+    private const Int32 MaxWorkerId = (1 << WorkerIdBits) - 1;
+
+    /// <summary>最大序列号（4095）</summary>
+    private const Int32 MaxSequence = (1 << SequenceBits) - 1;
+
+    /// <summary>时间戳左移位数</summary>
+    private const Int32 TimestampShift = WorkerIdBits + SequenceBits;
+
+    /// <summary>前缀左移位数</summary>
+    private const Int32 PrefixShift = TimestampBits + WorkerIdBits + SequenceBits;
+
+    /// <summary>工作节点ID左移位数</summary>
+    private const Int32 WorkerIdShift = SequenceBits;
+
+    /// <summary>时间回拨最大容忍度（毫秒）</summary>
+    private const Int64 MaxClockBack = 3600_000 + 10_000;
+
+    /// <summary>时间戳最大值（41位）</summary>
+    private const Int64 MaxTimestamp = (1L << TimestampBits) - 1;
+    #endregion
+
+    #region 属性
+    /// <summary>开始时间戳。首次使用前设置，否则无效，默认1970-1-1</summary>
+    /// <remarks>
+    /// 41位时间戳约69年有效期，与标准雪花算法相同
+    /// </remarks>
+    public DateTime StartTimestamp { get; set; } = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
+
+    private Int32 _workerId;
+    /// <summary>机器Id，取6位（0-63）</summary>
+    public Int32 WorkerId
+    {
+        get => _workerId;
+        set
+        {
+            if (value is < 0 or > MaxWorkerId)
+                throw new ArgumentOutOfRangeException(nameof(value), $"WorkerId必须在0-{MaxWorkerId}范围内");
+            _workerId = value;
+        }
+    }
+
+    private Int32 _sequence;
+    /// <summary>序列号，取12位（0-4095）。进程内静态，避免多个实例生成重复Id</summary>
+    public Int32 Sequence => _sequence;
+
+    /// <summary>全局机器Id。若设置，所有雪花实例都将使用该Id，可以由星尘配置中心提供本应用全局唯一机器码，且跨多环境唯一</summary>
+    public static Int32 GlobalWorkerId { get; set; }
+
+    /// <summary>workerId分配集群。配置后可确保所有实例化的雪花对象得到唯一workerId，建议使用Redis</summary>
+    public static ICache? Cluster { get; set; }
+
+    private Int64 _lastTimestamp;
+    #endregion
+
+    #region 构造函数
+    private static Int32 _globalInstanceId;
+    private static readonly Int32 _defaultInstanceId;
+
+    static SnowflakeV2()
+    {
+        try
+        {
+            var provider = ObjectContainer.Provider?.GetService<ICacheProvider>();
+            if (provider is { Cache: not MemoryCache } && provider.Cache != provider.InnerCache)
+                Cluster = provider.Cache;
+
+            var ip = NetHelper.MyIP();
+            if (ip != null)
+            {
+                var buf = ip.GetAddressBytes();
+                _defaultInstanceId = buf[3] & 0x3F; // 取最后6位（0-63）
+            }
+            else
+            {
+                _defaultInstanceId = Rand.Next(1, 64);
+            }
+        }
+        catch
+        {
+            _defaultInstanceId = Rand.Next(1, 64);
+        }
+    }
+    #endregion
+
+    #region 核心方法
+    private Boolean _initialized;
+    private readonly Object _lockObject = new();
+
+    /// <summary>初始化WorkerId</summary>
+    private void Initialize()
+    {
+        if (_initialized) return;
+
+        lock (_lockObject)
+        {
+            if (_initialized) return;
+
+            using var span = DefaultTracer.Instance?.NewSpan("SnowflakeV2-Init", new { id = Interlocked.Increment(ref _globalInstanceId) });
+
+            if (WorkerId <= 0 && GlobalWorkerId > 0)
+                WorkerId = GlobalWorkerId & MaxWorkerId;
+
+            if (WorkerId <= 0 && Cluster != null)
+                JoinCluster(Cluster);
+
+            if (WorkerId <= 0)
+            {
+                var nodeId = _defaultInstanceId;
+                var pid = Process.GetCurrentProcess().Id;
+                var tid = Thread.CurrentThread.ManagedThreadId;
+                // 6位WorkerId，混合IP、进程、线程
+                WorkerId = (nodeId ^ (pid & 0x3F) ^ (tid & 0x3F)) & MaxWorkerId;
+            }
+
+            span?.AppendTag($"WorkerId={WorkerId} StartTimestamp={StartTimestamp.ToFullString()}");
+            _initialized = true;
+        }
+    }
+
+    /// <summary>获取下一个Id</summary>
+    /// <remarks>基于当前时间，转StartTimestamp所属时区后，生成Id</remarks>
+    /// <returns>雪花Id（8开头）</returns>
+    public virtual Int64 NewId()
+    {
+        Initialize();
+
+        var currentTimestamp = (Int64)(ConvertKind(DateTime.Now) - StartTimestamp).TotalMilliseconds;
+        var workerId = WorkerId & MaxWorkerId;
+
+        var lastTime = Volatile.Read(ref _lastTimestamp);
+        var timestamp = currentTimestamp;
+        if (currentTimestamp < lastTime)
+        {
+            var clockBack = lastTime - currentTimestamp;
+            if (clockBack > MaxClockBack)
+                throw new InvalidOperationException($"时间回拨过大 ({clockBack}ms)。为保证唯一性，雪花算法拒绝生成新Id");
+
+            timestamp = lastTime;
+        }
+
+        var sequence = 0;
+        lock (_lockObject)
+        {
+            while (true)
+            {
+                if (timestamp > _lastTimestamp)
+                {
+                    _sequence = 0;
+                    _lastTimestamp = timestamp;
+                    sequence = 0;
+                    break;
+                }
+
+                if (timestamp == _lastTimestamp)
+                {
+                    sequence = Interlocked.Increment(ref _sequence);
+                    if (sequence <= MaxSequence) break;
+
+                    timestamp = _lastTimestamp + 1;
+                    _sequence = 0;
+                }
+                else
+                {
+                    timestamp = _lastTimestamp;
+                }
+            }
+        }
+
+        return BuildSnowflakeId(timestamp, workerId, sequence);
+    }
+
+    /// <summary>获取指定时间的Id，带上节点和序列号。可用于根据业务时间构造插入Id</summary>
+    /// <remarks>
+    /// 基于指定时间，转StartTimestamp所属时区后，生成Id。
+    /// 如果为指定毫秒时间生成多个Id（超过4096），则可能重复。
+    /// </remarks>
+    /// <param name="time">时间</param>
+    /// <returns>雪花Id（8开头）</returns>
+    public virtual Int64 NewId(DateTime time)
+    {
+        Initialize();
+
+        time = ConvertKind(time);
+        var timestamp = (Int64)(time - StartTimestamp).TotalMilliseconds;
+        var workerId = WorkerId & MaxWorkerId;
+        var sequence = Interlocked.Increment(ref _sequence) & MaxSequence;
+
+        return BuildSnowflakeId(timestamp, workerId, sequence);
+    }
+
+    /// <summary>获取指定时间的Id，传入唯一业务id（取模为6位）。可用于物联网数据采集，每64个传感器为一组，每组每毫秒多个Id</summary>
+    /// <remarks>
+    /// 基于指定时间，转StartTimestamp所属时区后，生成Id。
+    /// 
+    /// 在物联网数据采集中，数据分析需要，更多希望能够按照采集时间去存储。
+    /// 为了避免主键重复，可以使用传感器id作为workerId。
+    /// uid需要取模为6位，即按64分组，每组每毫秒最多生成4096个Id。
+    /// 
+    /// 如果为指定分组在特定毫秒时间生成多个Id（超过4096），则可能重复。
+    /// </remarks>
+    /// <param name="time">时间</param>
+    /// <param name="uid">唯一业务id。例如传感器id</param>
+    /// <returns>雪花Id（8开头）</returns>
+    public virtual Int64 NewId(DateTime time, Int32 uid)
+    {
+        Initialize();
+
+        time = ConvertKind(time);
+        var timestamp = (Int64)(time - StartTimestamp).TotalMilliseconds;
+        var workerId = uid & MaxWorkerId;
+        var sequence = Interlocked.Increment(ref _sequence) & MaxSequence;
+
+        return BuildSnowflakeId(timestamp, workerId, sequence);
+    }
+
+    /// <summary>获取指定时间的Id，传入唯一业务id（18位）。可用于物联网数据采集，每262144个传感器一组，每组每毫秒1个Id</summary>
+    /// <remarks>
+    /// 基于指定时间，转StartTimestamp所属时区后，生成Id。
+    /// 
+    /// 在物联网数据采集中，数据分析需要，更多希望能够按照采集时间去存储。
+    /// 为了避免主键重复，可以使用传感器id作为workerId。
+    /// 再配合upsert写入数据，如果同一个毫秒内传感器有多行数据，则只会插入一行。
+    /// 
+    /// 如果为指定业务id在特定毫秒时间生成多个Id（超过1个），则可能重复。
+    /// </remarks>
+    /// <param name="time">时间</param>
+    /// <param name="uid">唯一业务id。例如传感器id</param>
+    /// <returns>雪花Id（8开头）</returns>
+    public virtual Int64 NewId22(DateTime time, Int32 uid)
+    {
+        Initialize();
+
+        time = ConvertKind(time);
+        var timestamp = (Int64)(time - StartTimestamp).TotalMilliseconds;
+        var workerId = uid & ((1 << 18) - 1); // 18位业务ID（6+12位）
+
+        return ((Int64)PrefixValue << PrefixShift) |
+               ((timestamp & MaxTimestamp) << TimestampShift) |
+               (Int64)workerId;
+    }
+
+    /// <summary>时间转为Id，不带节点和序列号。可用于构建时间片段查询</summary>
+    /// <remarks>
+    /// 基于指定时间，转StartTimestamp所属时区后，生成不带WorkerId和序列号的Id。
+    /// 一般用于构建时间片段查询，例如查询某个时间段内的数据，把时间片段转为雪花Id片段。
+    /// </remarks>
+    /// <param name="time">时间</param>
+    /// <returns>时间部分的Id（8开头）</returns>
+    public virtual Int64 GetId(DateTime time)
+    {
+        time = ConvertKind(time);
+        var timestamp = (Int64)(time - StartTimestamp).TotalMilliseconds;
+        return ((Int64)PrefixValue << PrefixShift) |
+               ((timestamp & MaxTimestamp) << TimestampShift);
+    }
+
+    /// <summary>解析雪花Id，得到时间、WorkerId和序列号</summary>
+    /// <remarks>
+    /// 其中的时间是StartTimestamp所属时区的时间。
+    /// </remarks>
+    /// <param name="id">雪花Id</param>
+    /// <param name="time">解析出的时间</param>
+    /// <param name="workerId">解析出的工作节点Id</param>
+    /// <param name="sequence">解析出的序列号</param>
+    /// <returns>是否解析成功</returns>
+    public virtual Boolean TryParse(Int64 id, out DateTime time, out Int32 workerId, out Int32 sequence)
+    {
+        // 验证前缀（可选，根据需要决定是否严格校验）
+        var prefix = (Int32)(id >> PrefixShift) & 0xF;
+        if (prefix != PrefixValue)
+        {
+            // 如果前缀不是8，可能是老版本ID，也尝试解析
+            // 或者直接返回false，根据业务需求决定
+        }
+
+        var timestamp = (id >> TimestampShift) & MaxTimestamp;
+        time = StartTimestamp.AddMilliseconds(timestamp);
+        workerId = (Int32)((id >> WorkerIdShift) & MaxWorkerId);
+        sequence = (Int32)(id & MaxSequence);
+        return true;
+    }
+
+    /// <summary>把输入时间转为开始时间戳的类型，便于相减</summary>
+    /// <param name="time">要转换的时间</param>
+    /// <returns>转换后的时间</returns>
+    public DateTime ConvertKind(DateTime time)
+    {
+        if (time.Kind == DateTimeKind.Unspecified) return time;
+
+        return StartTimestamp.Kind switch
+        {
+            DateTimeKind.Utc => time.ToUniversalTime(),
+            DateTimeKind.Local => time.ToLocalTime(),
+            _ => time,
+        };
+    }
+    #endregion
+
+    #region 私有辅助方法
+    /// <summary>构建雪花Id（8开头）</summary>
+    private static Int64 BuildSnowflakeId(Int64 timestamp, Int32 workerId, Int32 sequence)
+    {
+        return ((Int64)PrefixValue << PrefixShift) |
+               ((timestamp & MaxTimestamp) << TimestampShift) |
+               ((Int64)(workerId & MaxWorkerId) << WorkerIdShift) |
+               (Int64)(sequence & MaxSequence);
+    }
+    #endregion
+
+    #region 集群扩展
+    /// <summary>加入集群。由集群统一分配WorkerId，确保唯一，从而保证生成的雪花Id绝对唯一</summary>
+    /// <param name="cache">缓存实例，通常是Redis</param>
+    /// <param name="key">分配WorkerId的缓存键</param>
+    public virtual void JoinCluster(ICache cache, String key = "SnowflakeV2WorkerId")
+    {
+        if (cache == null) throw new ArgumentNullException(nameof(cache));
+
+        var workerId = (Int32)cache.Increment(key, 1);
+        WorkerId = workerId & MaxWorkerId;
+    }
+    #endregion
+}
+```
+
+---
+
+### 六、兼容性验证
+
+通过单元测试验证新旧版本 ID 的递增关系：
+
+```csharp
+[Fact(DisplayName = "V2版本的Id大于V1版本")]
+public void V2EqV1()
+{
+    var snowflake = new Snowflake();
+    var id = snowflake.NewId();
+
+    var snowflake2 = new SnowflakeV2();
+    snowflake2.StartTimestamp = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    var id2 = snowflake2.NewId();
+
+    Assert.True(id2 > id);
+}
+```
+
+另一个测试验证迁移时间：
+
+```csharp
+[Fact(DisplayName = "V2版本的Id大于V1版本,迁移时间2025年12月之前")]
+public void V2EqV1WithMigrateDate()
+{
+    var snowflake = new Snowflake();
+    var id = snowflake.NewId(new DateTime(2025, 12, 1, 0, 0, 0, DateTimeKind.Utc));
+
+    var snowflake2 = new SnowflakeV2();
+    snowflake2.StartTimestamp = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    var id2 = snowflake2.NewId();
+
+    Assert.True(id2 > id);
+}
+```
+
+✅ 测试结果：
+在 2025 年迁移后，SnowflakeV2 生成的 ID 始终大于旧版 Snowflake 的最大 ID，且仍保持递增与唯一性。
+
+---
+
+### 七、迁移与使用建议
+
+1. **迁移时机**：建议在 2025 年前完成切换；
+2. **替换方式**：通过依赖注入替换 `Snowflake` 为 `SnowflakeV2`；
+3. **初始化配置**：
+
+   ```csharp
+   var snowflake2 = ObjectContainer.Resolve<SnowflakeV2>();
+   snowflake2.StartTimestamp = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+   ```
+4. **注意事项**：
+
+   * `SnowflakeV2` 不可直接 `new`，应由容器单例注入；
+   * 同一张表中必须保证唯一的 `SnowflakeV2` 实例；
+   * 分布式场景建议通过 Redis 分配 `WorkerId`。
+
+---
+
+### 八、结论
+
+SnowflakeV2 是基于 NewLife 框架原雪花算法的升级版本，核心改进如下：
+
+| 特性     | Snowflake (旧) | SnowflakeV2 (新) |
+| ------ | ------------- | --------------- |
+| 时间起点   | 1970-01-01    | 2025-01-01      |
+| 前缀标识   | 无             | 固定 1101（二进制）    |
+| 机器位    | 10 位          | 6 位             |
+| ID 范围  | 1970~2040     | 2025~2094       |
+| ID 递增性 | 有序            | 保持递增且大于旧 ID     |
+
+该方案不仅保证了分布式全局唯一性和顺序性，还解决了时间溢出问题，是对原雪花算法的工程化优化。
+
+---
+
+### ✨ 总结
+
+通过在最高位增加前缀标识（1101），并重新定义时间起点为 2025 年，SnowflakeV2 兼容原有结构、保持 ID 递增，并避免了 2040 年的时间耗尽风险。这是一次兼顾**向前兼容**与**未来可扩展性**的架构升级。
