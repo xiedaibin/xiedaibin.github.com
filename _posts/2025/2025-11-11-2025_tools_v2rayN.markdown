@@ -1,0 +1,150 @@
+---
+layout: page
+title: 在局域网中使用 Windows V2rayN 代理，让 CentOS Docker 顺利访问 Docker Hub
+category: 工具
+tags: v2rayN
+---
+
+
+在国内或公司受限网络环境中，有时 Docker 容器无法直接访问 Docker Hub，导致拉取镜像失败。本文总结了如何通过 **Windows 上的 V2rayN 代理**，让局域网内的 CentOS 主机上的 Docker 守护进程顺利拉取镜像，并解决相关网络问题。
+
+---
+
+## 1. 问题背景
+
+场景：
+
+* Windows 上运行 V2rayN，用于访问外网。
+* CentOS 服务器（如 192.168.1.240）上运行 Docker，需要通过 Windows V2rayN 代理访问 Docker Hub。
+* 初始尝试中出现报错：
+
+```
+docker compose pull
+proxyconnect tcp: dial tcp 192.168.1.152:10809: connect: connection refused
+```
+
+分析原因：
+
+1. CentOS 能 ping 通 Windows IP，但端口 10809 无法连接。
+2. Windows 默认 V2rayN 入站监听地址为 `127.0.0.1`，局域网无法访问。
+3. 防火墙可能阻止了其他主机访问该端口。
+
+---
+
+## 2. Windows 端配置
+
+### 2.1 修改 V2rayN 允许局域网访问
+
+1. 打开 V2rayN → **参数设置 → Core 基本设置**
+2. 打开 **允许来自局域网的连接**
+3. 保存设置并 **重启 V2rayN**
+
+> 注意：V2rayN GUI 启动时会自动覆盖监听地址为 127.0.0.1，所以必须启用此选项，或者使用 Core 配置文件手动设置 `listen: "0.0.0.0"`。
+
+### 2.2 检查端口监听状态
+
+在 Windows 命令行（管理员权限）运行：
+
+```powershell
+netstat -ano | findstr 10809
+```
+
+期望输出：
+
+```
+TCP    0.0.0.0:10809      0.0.0.0:0       LISTENING       <PID>
+```
+
+* `0.0.0.0:10809` 表示绑定所有网卡，可被局域网访问。
+
+### 2.3 配置防火墙允许入站访问
+
+1. 打开 **控制面板 → 系统和安全 → Windows 防火墙 → 高级设置 → 入站规则**
+2. 新建规则：
+
+   * 类型：端口 → TCP → 本地端口 10809
+   * 操作：允许连接
+   * 作用域：局域网或指定 CentOS IP
+3. 保存规则，并确保规则已启用。
+
+---
+
+## 3. CentOS 端配置
+
+### 3.1 测试网络连通性
+
+```bash
+ping 192.168.1.152
+telnet 192.168.1.152 10809
+```
+
+* ping 通说明 IP 可达
+* telnet 成功显示 `Connected` 表明代理端口可访问
+
+### 3.2 配置 Docker 使用代理
+
+在 CentOS 上创建或编辑：
+
+```bash
+sudo mkdir -p /etc/systemd/system/docker.service.d
+sudo nano /etc/systemd/system/docker.service.d/http-proxy.conf
+```
+
+内容如下：
+
+```ini
+[Service]
+Environment="HTTP_PROXY=http://192.168.1.152:10809"
+Environment="HTTPS_PROXY=http://192.168.1.152:10809"
+Environment="NO_PROXY=localhost,127.0.0.1,192.168.1.240"
+```
+
+保存后重载 Docker 并重启：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
+### 3.3 测试 Docker 能否通过代理拉取镜像
+
+```bash
+docker pull hello-world
+docker compose -f docker-compose-image-tag.yml pull
+```
+
+* 如果成功拉取，说明 Docker 已通过 Windows 代理访问 Docker Hub。
+
+---
+
+## 4. 常见问题与注意事项
+
+1. **V2rayN GUI 会覆盖配置**
+
+   * GUI 默认只允许本机访问（127.0.0.1），要么启用“允许来自局域网的连接”，要么直接用 Core 配置文件启动。
+
+2. **防火墙**
+
+   * Windows 防火墙必须允许 TCP 端口入站访问，否则 CentOS 无法连接。
+
+3. **安全性**
+
+   * 局域网内其他主机也能访问该代理端口，如有安全顾虑，可限制只允许特定 IP。
+
+4. **Docker 镜像加速器**
+
+   * 国内网络可额外使用 Docker 镜像加速器，减少对代理的依赖。
+
+---
+
+## 5. 总结
+
+通过本文方法，可以在局域网环境下：
+
+1. Windows 上运行 V2rayN，允许局域网访问代理端口。
+2. 配置 Windows 防火墙允许 CentOS 访问该端口。
+3. 在 CentOS Docker 中配置 HTTP/HTTPS 代理。
+
+实现 Docker 直接通过 Windows 代理访问 Docker Hub，解决了镜像拉取失败的问题。
+
+✅ 这样既可以利用现有 Windows V2rayN 代理，又避免在 CentOS 上额外安装代理软件。
