@@ -1,0 +1,155 @@
+---
+layout: page
+title: 使用 Docker Compose 安装 Apache Superset
+category: 工具
+tags: Superset
+---
+
+## 安装步骤
+
+1. **安装前准备**
+   确保您的机器已安装：
+
+   * Docker
+   * Docker Compose（推荐使用 `docker compose` 新语法）
+   * Git
+
+2. **获取项目代码**
+
+   ```bash
+   git clone https://github.com/apache/superset
+   cd superset
+   ```
+
+3. **切换到指定版本（可选）**
+   为保持稳定，推荐切换至官方发布标签，例如：
+
+   ```bash
+   git checkout tags/5.0.0
+   ```
+
+4. **配置 `.env` 文件**
+   在项目根目录，复制或修改 `.env` 文件，并确认如下关键配置（示例）：
+
+   ```env
+   DATABASE_USER=superset
+   DATABASE_PASSWORD=superset
+   DATABASE_DB=superset
+
+   EXAMPLES_DB=examples
+   EXAMPLES_USER=examples
+   EXAMPLES_PASSWORD=examples
+
+   SUPERSET_LOAD_EXAMPLES=no
+   ```
+
+5. **启动 Superset 容器**
+   使用 Docker Compose 启动：
+
+   ```bash
+   docker compose -f docker‑compose‑image‑tag.yml up -d --build
+   ```
+
+6. **访问 Superset**
+   容器启动完成后，在浏览器打开：
+
+   ```
+   http://localhost:8088
+   ```
+
+   使用默认账号（例如 `admin` / `admin`）登录。
+
+7. **停止服务（可选）**
+   当不再使用时，可以这样关闭：
+
+   ```bash
+   docker compose -f docker‑compose‑image‑tag.yml down
+   ```
+
+---
+
+## 遇到的常见问题与解决办法
+
+### 🔹 问题 1：初始化脚本权限被拒绝
+
+```
+exec: "/app/docker/docker-init.sh": permission denied
+```
+
+**原因**：容器启动脚本缺少执行权限。
+**解决**：在宿主机执行 `chmod +x docker/docker-init.sh`，然后重建镜像。
+
+---
+
+### 🔹 问题 2：PostgreSQL 数据目录版本不兼容
+
+```
+FATAL: database files are incompatible with server  
+DETAIL: The data directory was initialized by PostgreSQL version 16, which is not compatible with this version 15.14
+```
+
+**原因**：数据卷中已有由较新 PostgreSQL 版本初始化的目录，而镜像使用较旧版本。
+**解决**：删除旧卷或更换镜像版本。例如：
+
+```bash
+docker volume rm superset_db_data
+docker compose down ‑v
+docker compose up ‑d ‑‑build
+```
+
+---
+
+### 🔹 问题 3：示例数据加载失败／网络不可达
+
+```
+urllib.error.URLError: <urlopen error [Errno 101] Network is unreachable>
+```
+
+**原因**：
+
+* 容器无法访问外网，导致下载示例数据失败。
+* 虽然在 `.env` 中写了 `SUPERSET_LOAD_EXAMPLES=no`，但服务仍旧以 `yes` 启动。
+
+**解决**：
+
+* 确认 `.env` 中 `SUPERSET_LOAD_EXAMPLES=no` 生效。
+* 检查 `docker‑compose‑image‑tag.yml` 中是否有服务环境变量硬编码 `SUPERSET_LOAD_EXAMPLES: "${SUPERSET_LOAD_EXAMPLES:-yes}"`，若是则直接将其改为 `“no”`。
+* 完整重建服务：
+
+  ```bash
+  docker compose down ‑v ‑‑rmi all
+  docker compose up ‑d ‑‑build
+  ```
+
+---
+
+### 🔹 问题 4：镜像拉取失败或元数据校验失败
+
+```
+failed to resolve source metadata for docker.io/library/python:3.11.13‑slim‑bookworm
+failed size validation: ...
+```
+
+**原因**：镜像缓存损坏、网络不稳定或镜像源问题。
+**解决**：
+
+```bash
+docker system prune ‑a
+docker compose build ‑‑no‑cache
+```
+
+或换用镜像加速器。
+
+---
+
+## 4️⃣ 总结经验
+
+* `.env` 文件修改 **必须** 在容器构建之前完成，否则 Compose 会使用默认值。
+* `SUPERSET_LOAD_EXAMPLES` 要同时确认 `.env` 和 `docker‑compose` 文件中，避免“设了但是没生效”的情况。
+* 有数据卷/数据库版本冲突时，删除卷重新初始化是快捷且可靠的方法。
+* 日志、`docker compose config` 输出、环境变量检查是定位问题的关键手段。
+* 按照官方快速入门流程，可在几分钟内启动 Superset 做试验，但用于生产还需进一步配置（例如 HTTPS、用户权限、持久化存储等）([superset.org.cn][1])
+
+---
+
+[1]: https://superset.org.cn/docs/quickstart/ "快速入门 | Superset 数据可视化平台"
