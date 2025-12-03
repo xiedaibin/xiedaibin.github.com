@@ -1,0 +1,194 @@
+---
+layout: page
+title: ASP.NET Core + ABP 使用 Redis 的最佳实践：连接复用、缓存、Data Protection 密钥共享与分布式锁完整配置示例
+category: 工具
+tags: ABP
+---
+
+在实际生产环境中，Redis 不仅用于缓存，还经常承担连接复用、Session/Cookie 加解密密钥共享（Data Protection）、分布式锁等核心职责。本文记录了我最终采用的一套完整 Redis 配置方案，并总结了优化过程中的关键点，供团队及他人参考。
+
+---
+
+## 🧱 一、为什么要优化 Redis 配置？
+
+在微服务或多实例部署场景中，Redis 通常承担以下职责：
+
+### **1. 作为应用缓存（Distributed Cache）**
+
+提供对象缓存、配置缓存等。
+
+### **2. 共享 Data Protection 密钥（解决 Cookie 解密失败问题）**
+
+避免多实例之间的认证 Cookie 解密不一致。
+
+### **3. 分布式锁**
+
+保证业务在多实例中拥有强一致性控制能力。
+
+### **4. 避免 Redis 连接过多**
+
+如果每个组件都创建一个 ConnectionMultiplexer，会导致连接数爆炸、性能下降。
+
+---
+
+## 🧩 二、核心目标与最终方案
+
+为了解决以上问题，这次改造的目标是：
+
+* **只创建一个 Redis ConnectionMultiplexer 实例并复用（共享连接）**
+* **将连接放入 DI 单例**
+* **让微软的 RedisCacheOptions、ABP 的缓存系统同时复用这个连接**
+* **在生产环境使用 Redis 作为 Data Protection 的密钥仓库**
+* **使用 Medallion.Threading 实现 Redis 分布式锁**
+
+最终的配置代码如下（已在生产验证稳定）：
+
+---
+
+## 🟦 三、最终的 Redis 配置代码（可直接复用）
+
+```csharp
+#region 缓存
+var configurationOptions = ConfigurationOptions.Parse(configuration["Redis:Configuration"]);
+// 可选:添加更多配置
+//configurationOptions.AbortOnConnectFail = false;
+//configurationOptions.ConnectTimeout = 10000;
+//configurationOptions.SyncTimeout = 3000;
+//configurationOptions.ConnectRetry = 3;
+//configurationOptions.KeepAlive = 60;
+
+// 共用一个连接实例
+var connection = ConnectionMultiplexer.Connect(configurationOptions);
+
+// 注册单例并输出连接事件日志
+context.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("RedisConn");
+    logger?.LogInformation($"Redis Logger");
+
+    connection.ConnectionFailed += (s, e) =>
+    {
+        logger?.LogError($"Redis 连接失败: {e.Exception?.Message}");
+    };
+    connection.ConnectionRestored += (s, e) =>
+    {
+        logger?.LogInformation($"Redis 连接恢复: {e.FailureType}");
+    };
+
+    return connection;
+});
+
+// 配置微软的 RedisCacheOptions (不是 ABP 的)
+context.Services.Configure<Microsoft.Extensions.Caching.StackExchangeRedis.RedisCacheOptions>(options =>
+{
+    options.ConnectionMultiplexerFactory = () => Task.FromResult((IConnectionMultiplexer)connection);
+});
+
+// 配置 ABP 的缓存选项
+Configure<AbpDistributedCacheOptions>(options =>
+{
+    options.KeyPrefix = "warehouse:";
+    options.GlobalCacheEntryOptions = new DistributedCacheEntryOptions()
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(60),
+        //SlidingExpiration = TimeSpan.FromMinutes(60)
+    };
+});
+
+// Data Protection：共享加密密钥（仅生产环境）
+if (!hostingEnvironment.IsDevelopment())
+{
+    context.Services
+        .AddDataProtection()
+        .SetApplicationName(Assembly.GetExecutingAssembly().FullName)
+        .PersistKeysToStackExchangeRedis(connection, "WarehouseModule-Protection-Keys");
+}
+#endregion
+
+#region abp DistributedLock 分布式锁
+context.Services.AddSingleton<Medallion.Threading.IDistributedLockProvider>(sp =>
+{
+    return new RedisDistributedSynchronizationProvider(connection.GetDatabase());
+});
+#endregion
+```
+
+---
+
+## 🧠 四、关键点解析（总结讨论内容）
+
+### ### **1. 全局复用 Redis 连接**
+
+`ConnectionMultiplexer` 是一个重量级对象，官方明确建议：
+
+> 应作为全局单例复用，而不是频繁创建。
+
+通过单例模式注入，避免了创建过多连接导致的资源浪费。
+
+---
+
+### **2. Microsoft.RedisCache 与 ABP 缓存统一走同一个连接**
+
+这一步非常关键：
+
+```csharp
+options.ConnectionMultiplexerFactory = () => Task.FromResult((IConnectionMultiplexer)connection);
+```
+
+微软的 RedisCache 默认会自己创建连接，我们通过工厂方法让它使用我们自己的。
+
+---
+
+### **3. 使用 Redis 保存 Data Protection 密钥（生产环境必须）**
+
+如果项目部署为多实例，必须共享 Data Protection 密钥，否则会出现：
+
+* 登录后页面跳回登录页
+* Cookie 无法解密
+* 用户被频繁踢下线
+
+在生产环境中使用：
+
+```csharp
+.PersistKeysToStackExchangeRedis(connection, "WarehouseModule-Protection-Keys");
+```
+
+让所有实例共享相同的密钥。
+
+---
+
+### **4. ABP 分布式锁**
+
+使用 Medallion.Threading：
+
+```csharp
+new RedisDistributedSynchronizationProvider(connection.GetDatabase());
+```
+
+这让我们能轻松实现：
+
+* 串行化关键业务逻辑
+* 防止并发写入
+* 构建秒杀、库存扣减等功能
+
+---
+
+## 🎯 五、最终收益
+
+| 优化项         | 收益           |
+| ----------- | ------------ |
+| 复用 Redis 连接 | 降低连接数、提升性能   |
+| 统一缓存使用同一连接  | 避免连接爆炸问题     |
+| Redis 保存密钥  | 多实例环境下认证稳定可靠 |
+| 使用分布式锁      | 提升并发一致性能力    |
+| 结构清晰、可维护性更高 | 更适合团队协作和应用扩展 |
+
+---
+
+# 📌 总结
+
+这次优化不仅解决了 Redis 连接不统一的问题，还让整个系统具备了更高的稳定性和可扩展性。
+通过统一的连接复用、缓存配置、Data Protection 密钥共享以及分布式锁能力，项目在分布式部署环境下能够更加稳定、高效运行。
+
+如果你在使用 ABP、Docker/K8s、多实例部署或微服务架构，那么这个方案完全值得采用。
