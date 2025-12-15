@@ -1,0 +1,204 @@
+---
+layout: page
+title: 排查与解决：单节点 kubeadm 集群无法启动的完整指南
+category: 工具
+tags: ABP
+---
+单节点 Kubernetes 集群（基于 kubeadm）中，有时我们会遇到集群突然无法启动、关键组件全部退出的情况，例如：
+
+* kubelet 反复重启
+* etcd、kube-apiserver 无法启动
+* kube-proxy、flannel 等网络组件状态异常
+* `docker ps` 中大量容器处于 Exited 状态
+
+本篇文章记录一次真实的排查过程，通过逐步分析原因，最终成功恢复了整个集群。希望能够为遇到类似问题的运维人员提供参考。
+
+---
+
+## **一、故障现象**
+
+在检查容器状态时，可以看到多个核心组件已经退出：
+
+```
+kube-flannel  Exited (255)
+kube-proxy    Exited (255)
+```
+
+同时执行：
+
+```bash
+docker ps | grep apiserver
+```
+
+发现关键组件 **kube-apiserver / controller / scheduler / etcd** 并没有正常运行。
+
+集群已经处于彻底瘫痪的状态。
+
+---
+
+## **二、从 kubelet 入手排查**
+
+Kubernetes 的核心组件都是通过 **kubelet 静态 Pod** 的方式启动的，因此 kubelet 一旦无法启动，所有组件都会随之失效。
+
+首先查看 service 状态：
+
+```bash
+systemctl status kubelet
+```
+
+输出显示：
+
+```
+main process exited, status=1/FAILURE
+kubelet.service failed
+```
+
+但 status 只能告诉我们 kubelet 启动失败，并不能说明原因。继续查看详细日志。
+
+---
+
+## **三、查看 kubelet 日志：发现关键报错**
+
+通过 journalctl 查看详细日志：
+
+```bash
+journalctl -xeu kubelet --no-pager
+```
+
+核心报错如下：
+
+```
+failed to run Kubelet: running with swap on is not supported
+```
+
+这条信息非常明确：
+
+> **kubelet 检测到系统开启了 swap，因此拒绝启动。**
+
+Kubernetes 出于性能与调度一致性的考虑，默认要求宿主机禁用 swap。哪怕 swap 未被使用，只要 swap 处于启用状态，kubelet 就会直接退出。
+
+进一步验证：
+
+```bash
+free -h
+```
+
+显示：
+
+```
+Swap: 4.0G  0B  4.0G
+```
+
+虽然 swap 使用量为 0，但依旧处于开启状态。
+
+问题原因已经明确：**swap 未关闭，导致 kubelet 无法启动 → 全集群宕掉。**
+
+---
+
+## **四、解决方案：关闭 swap**
+
+### 1）临时关闭（立即生效）
+
+```bash
+swapoff -a
+```
+
+再次查看：
+
+```bash
+free -h
+```
+
+应看到：
+
+```
+Swap: 0  0  0
+```
+
+---
+
+### 2）永久关闭（防止重启后自动开启）
+
+编辑 fstab：
+
+```bash
+vim /etc/fstab
+```
+
+找到：
+
+```
+/swapfile swap swap defaults 0 0
+```
+
+注释掉：
+
+```
+#/swapfile swap swap defaults 0 0
+```
+
+保存退出。
+
+---
+
+### 3）重启 kubelet
+
+```bash
+systemctl restart kubelet
+systemctl status kubelet
+```
+
+此时 kubelet 应恢复为：
+
+```
+active (running)
+```
+
+---
+
+## **五、验证集群组件恢复**
+
+kubelet 恢复后，静态 Pod 会自动启动核心组件，再配合容器运行时，所有组件将逐步恢复运行。
+
+查看系统 Pod 状态：
+
+```bash
+kubectl get pods -A
+```
+
+检查容器状态：
+
+```bash
+docker ps
+```
+
+可以看到 flannel、kube-proxy、etcd、kube-apiserver 等组件都已正常运行。
+
+整个单节点集群至此恢复正常。
+
+---
+
+## **六、总结：一次典型的 kubeadm 单节点故障排查过程**
+
+本次问题的根因非常典型：
+
+> **系统开启了 swap，导致 kubelet 拒绝启动，从而引发整个 Kubernetes 单节点集群瘫痪。**
+
+关键排查思路如下：
+
+1. **从整体现象入手** ：重要组件全部退出。
+2. **定位核心问题** ：查看 kubelet 状态。
+3. **分析日志** ：通过 `journalctl -xeu kubelet` 找到 swap 相关错误。
+4. **验证 swap 状态** ：使用 `free -h`。
+5. **制定解决方案** ：关闭 swap 并禁用开机自动挂载。
+6. **验证集群恢复** ：检查 kubelet、核心组件、网络组件状态。
+
+这种逐层推进的排查方式，适用于几乎所有 kubeadm 集群的启动故障。
+
+---
+
+## **结语**
+
+Kubernetes 单节点集群因 swap 导致的故障，是运维过程中最常见的问题之一。
+
+通过深入理解 kubelet 的行为与日志，可以快速定位问题所在。

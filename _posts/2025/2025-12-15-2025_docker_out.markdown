@@ -1,0 +1,137 @@
+---
+layout: page
+title: 服务器交接前 Docker login / logout 的安全总结
+category: 工具
+tags: ABP
+---
+
+
+在服务器上部署应用时，我们经常需要通过 `docker login` 登录私有镜像仓库来拉取镜像。当服务器后续需要转交给他人时，一个常见且重要的问题是：**Docker 登录过的账号是否会导致密码或权限泄露？**
+
+本文对这个问题做一个清晰、可直接落地的总结，适合用于生产环境和服务器交接场景。
+
+---
+
+## 一、docker login 会在服务器上保存什么？
+
+执行 `docker login` 后，Docker **不会保存明文密码**，而是：
+
+* 在当前用户目录下生成配置文件：
+
+  ```text
+  ~/.docker/config.json
+  ```
+* 其中保存的是 **Registry 的登录凭证（token / auth）**
+* 凭证通常是 Base64 编码的认证信息（不是加密）
+
+> ⚠️ 重要：
+> 拥有这个文件，效果等同于“已登录”，无需知道真实密码。
+
+---
+
+## 二、服务器转交给他人的真实风险
+
+如果服务器上仍然保留登录状态：
+
+* 他人可以直接 `docker pull` / `docker push` 你的私有镜像
+* 可以拷贝 `config.json` 到其他机器，继续以你的身份访问仓库
+* 如果当初是使用 `root` 登录，风险更高（`/root/.docker/config.json`）
+
+虽然**密码不会明文泄露**，但**账号权限已经被完整继承**。
+
+---
+
+## 三、部署完成后 docker logout 是否安全？
+
+答案非常明确：**是的，而且是推荐做法。**
+
+### docker logout 的行为
+
+```bash
+docker logout
+```
+
+它只会：
+
+* 删除本地保存的 Registry 登录凭证
+
+它**不会**：
+
+* 删除已拉取的镜像
+* 影响正在运行的容器
+* 影响容器的启动、重启
+* 影响已构建完成的镜像
+
+---
+
+## 四、logout 后，本地镜像还能不能用？
+
+### ✅ 已存在的镜像
+
+完全不受影响：
+
+```bash
+docker run your-image
+docker restart 容器
+docker-compose up -d
+```
+
+原因是：
+
+* 镜像已经存在于本地
+* 运行容器 **不需要访问 Registry**
+
+---
+
+### ❌ 什么时候需要重新 login？
+
+只有在以下场景中才需要再次登录：
+
+* `docker pull`
+* `docker push`
+* `docker build` 使用私有基础镜像（且本地不存在）
+* `docker-compose pull`
+
+---
+
+## 五、推荐的服务器部署与交接流程（标准做法）
+
+```bash
+docker login
+docker pull / docker build
+docker-compose up -d
+docker logout
+```
+
+特点：
+
+* ✔ 不残留账号凭证
+* ✔ 不影响服务运行
+* ✔ 服务器可安全交接
+
+这是**生产环境和临时服务器**都适用的最佳实践。
+
+---
+
+## 六、进一步的安全建议
+
+### 1️⃣ 使用 Access Token 代替账号密码
+
+* 可单独吊销
+* 不影响主账号
+* 风险最小化
+
+### 2️⃣ 服务器交接前的最低检查项
+
+* 执行 `docker logout`
+* 删除 `~/.docker/config.json`
+* 如有需要，修改 Registry 账号密码或吊销 token
+
+---
+
+## 七、总结一句话
+
+> **docker login 只影响“拉/推镜像”**
+> **docker logout 不影响“用镜像”**
+
+只要在部署完成后登出，就不会留下安全隐患，也不会影响服务运行。
