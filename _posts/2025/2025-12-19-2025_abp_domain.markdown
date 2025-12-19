@@ -1,0 +1,230 @@
+---
+layout: page
+title: 在不修改数据库的前提下使用 ABP Domain 架构的实践方案
+category: 技术
+tags: abp
+---
+
+
+在对老系统进行升级或重构时，**数据库结构尽量不变**往往是最重要、也最现实的约束之一。而当我们选择 ABP 框架时，很快就会遇到一个典型问题：
+
+> ABP 的 `AggregateRoot` 默认包含 `ExtraProperties` 和 `ConcurrencyStamp`，但老系统的表中并没有这些字段。
+
+本文将结合实际升级经验，介绍**如何在不修改数据库表结构的前提下，依然优雅地使用 ABP 的 Domain 架构**，并给出一套可落地、风险极低的实践方案。
+
+---
+
+## 一、问题本质：字段是从哪里来的？
+
+很多人在第一次使用 ABP 时会误以为：
+
+> 这些字段是 EF Core 自动生成的。
+
+实际上并不是。
+
+### 1. 默认 AggregateRoot 的真实组成
+
+ABP 中常用的：
+
+```csharp
+AggregateRoot<Guid>
+```
+
+等价于：
+
+* `Entity<Guid>`
+* `IAggregateRoot`
+* `IHasExtraProperties`
+* `IHasConcurrencyStamp`
+
+也就是说：
+
+* `ExtraProperties` 用于 JSON 扩展属性
+* `ConcurrencyStamp` 用于乐观并发控制
+
+**只要你的实体继承了这些接口，EF Core 就会强制要求数据库中存在对应字段。**
+
+---
+
+## 二、核心思路：不要直接使用默认 AggregateRoot
+
+解决思路非常清晰：
+
+> **刻意规避 ABP 默认 AggregateRoot 中的附加能力，只保留 Domain 所必需的部分。**
+
+ABP 判断一个实体是否为聚合根，并不依赖某个“固定基类”，而只依赖一个接口：
+
+```csharp
+IAggregateRoot
+```
+
+这为老系统升级留下了非常大的空间。
+
+---
+
+## 三、推荐方案：自定义一个“干净的” AggregateRoot
+
+### 1. 定义轻量聚合根基类
+
+```csharp
+using Volo.Abp.Domain.Entities;
+
+public abstract class LegacyAggregateRoot<TKey>
+    : Entity<TKey>, IAggregateRoot
+{
+    protected LegacyAggregateRoot() { }
+
+    protected LegacyAggregateRoot(TKey id)
+        : base(id)
+    {
+    }
+}
+```
+
+这个基类具备以下特性：
+
+* ✅ 是合法的 ABP 聚合根
+* ✅ 可正常使用 Repository、UnitOfWork、Domain Service
+* ❌ 不包含 `ExtraProperties`
+* ❌ 不包含 `ConcurrencyStamp`
+
+### 2. 实体继承该基类
+
+```csharp
+public class Order : LegacyAggregateRoot<Guid>
+{
+    public string OrderNo { get; set; }
+    public DateTime CreationTime { get; set; }
+}
+```
+
+此时：
+
+* EF Core 只会映射你**真实存在的字段**
+* 数据库表结构无需任何修改
+
+---
+
+## 四、DbContext 映射中的关键注意点
+
+### 1. 谨慎使用 `ConfigureByConvention`
+
+在老系统升级场景中，**不推荐直接使用**：
+
+```csharp
+builder.ConfigureByConvention();
+```
+
+原因是它会自动启用：
+
+* ExtraProperties 映射
+* ConcurrencyStamp 映射
+* 审计字段
+* 软删除字段
+
+这些都会对老表结构产生侵入。
+
+---
+
+### 2. 显式配置实体映射（强烈推荐）
+
+```csharp
+builder.Entity<Order>(b =>
+{
+    b.ToTable("Orders");
+    b.HasKey(x => x.Id);
+
+    b.Property(x => x.OrderNo)
+        .HasColumnName("order_no")
+        .HasMaxLength(50);
+});
+```
+
+这样可以做到：
+
+* 表名、字段名完全对齐老系统
+* 不引入任何隐式字段
+* 数据结构 100% 可控
+
+---
+
+## 五、关于并发控制的取舍
+
+如果老系统本身：
+
+* 没有并发控制
+* 或从未使用过版本号 / 时间戳
+
+那么在升级阶段：
+
+* **不实现 `IHasConcurrencyStamp` 即可**
+* EF Core 不会进行并发检查
+
+并发控制完全可以：
+
+* 留到系统稳定后再引入
+* 或在新模块中单独使用
+
+升级阶段不建议“顺手强上”。
+
+---
+
+## 六、那 ExtraProperties 以后怎么办？
+
+如果你担心未来的扩展能力，可以记住一个原则：
+
+> **升级阶段优先保证稳定，而不是一次性把所有能力拉满。**
+
+常见做法：
+
+* 升级阶段：完全不用 `ExtraProperties`
+* 稳定之后：
+
+  * 新增 JSON 字段
+  * 或通过扩展表实现
+
+ABP 并不会强制你现在就使用它。
+
+---
+
+## 七、这种用法是否“违背 ABP 设计”？
+
+答案是：**完全没有。**
+
+ABP 的真实设计哲学是：
+
+> * 领域模型属于你
+> * 框架只是基础设施
+> * 而不是反过来
+
+这也是 ABP 能被用于老系统升级的重要原因之一。
+
+---
+
+## 八、推荐的整体升级路线
+
+### 阶段一：平滑升级（最重要）
+
+* 数据库结构不变
+* 自定义 AggregateRoot
+* 引入 ABP 的 Domain / Repository / UoW 能力
+
+### 阶段二：逐步演进
+
+* 新模块使用完整 ABP Entity
+* 老模块逐步重构
+* 数据结构按业务节奏演进
+
+---
+
+## 九、结语
+
+在老系统升级场景中，**控制风险永远比追求“框架完整度”更重要**。
+
+通过自定义轻量 AggregateRoot，我们可以：
+
+* 保留 ABP Domain 架构的优势
+* 避免数据库结构的大规模变更
+* 实现真正可控、可回滚的系统升级
+
+这是一条被大量实践验证过的路径，非常适合渐进式改版的系统。
