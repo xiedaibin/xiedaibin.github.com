@@ -1,0 +1,224 @@
+---
+layout: page
+title: MySQL 分区表 + ORDER BY 优化：从 15 秒到 0.4 秒
+category: 技术
+tags: mysql
+---
+
+
+## 问题场景
+
+在一个拥有 680 万条数据的分区表中执行查询，遇到严重的性能问题：
+
+```sql
+SELECT ... 
+FROM warehouse_BoxFeeDetailHistories AS w
+LEFT JOIN warehouse_WarehouseBoxes AS w0 ON w.WhBoxId = w0.Id
+WHERE w.WarehouseId = 6923798304476504075
+  AND w.ShopId = 6955121677916565505
+  AND w.FeeType = 10
+  AND w.BeginTime >= '2025-12-31 00:00:00'
+  AND w.EndTime <= '2026-01-01 00:00:00'
+ORDER BY w.Id
+LIMIT 200;
+```
+
+**执行时间：15 秒**
+
+## EXPLAIN 分析
+
+### 优化前（ORDER BY w.Id）
+
+| select_type | partitions | type | key | rows | filtered | Extra |
+|------------|-----------|------|-----|------|----------|-------|
+| SIMPLE | p2025,...,p_future | index | PRIMARY | 17,435 | 0.00 | Using where |
+| SIMPLE | - | eq_ref | PRIMARY | 1 | 100.00 | Using where |
+
+**问题诊断：**
+- **扫描分区**：查询命中了多个分区（p2025 到 p_future）
+- **索引选择**：使用了主键索引而非时间范围索引
+- **过滤率极低**：filtered = 0.00%，几乎所有扫描的行都被过滤掉
+- **扫描行数**：17,435 行，远超实际需要的 200 行
+
+### 优化后（ORDER BY w.BeginTime, w.Id）
+
+| select_type | partitions | type | key | rows | filtered | Extra |
+|------------|-----------|------|-----|------|----------|-------|
+| SIMPLE | p2025,p2026,p2027... | range | BeginTime_idx | 41,184 | 0.15 | Using index condition; Using where |
+| SIMPLE | - | eq_ref | PRIMARY | 1 | 100.00 | Using where |
+
+**执行时间：0.4 秒（提升 37.5 倍）**
+
+**性能改善原因：**
+- **type: range**：使用范围扫描而非全索引扫描
+- **key: BeginTime_idx**：选择了时间索引，与 WHERE 条件匹配
+- **filtered: 0.15%**：虽然扫描行数增加，但过滤更精准
+- **分区裁剪生效**：虽然仍命中多个分区，但结合索引定位更快
+
+## 核心问题：分区表 + ORDER BY 的优化器陷阱
+
+### 问题本质
+
+该表按 **BeginTime 字段按年分区**：
+
+```sql
+-- 分区结构（推测）
+PARTITION BY RANGE (YEAR(BeginTime)) (
+    PARTITION p2025 VALUES LESS THAN (2026),
+    PARTITION p2026 VALUES LESS THAN (2027),
+    PARTITION p2027 VALUES LESS THAN (2028),
+    ...
+    PARTITION p_future VALUES LESS THAN MAXVALUE
+);
+```
+
+当使用 `ORDER BY w.Id` 时：
+
+```
+MySQL 优化器的决策：
+1. 需要按 Id 排序 → 选择主键索引
+2. WHERE 条件包含 BeginTime 范围 → 需要扫描多个分区
+3. 在每个分区中按主键顺序扫描 → 逐行过滤 WHERE 条件
+4. 直到凑够 200 条记录 → 大量无效扫描
+```
+
+当改用 `ORDER BY w.BeginTime, w.Id` 时：
+
+```
+MySQL 优化器的决策：
+1. WHERE 和 ORDER BY 都涉及 BeginTime → 选择 BeginTime_idx
+2. 使用索引范围扫描 → 直接定位到时间区间
+3. 分区裁剪 + 索引条件下推 → 高效过滤
+4. 在小结果集内排序 → 快速完成
+```
+
+## 解决方案
+
+### 方案一：调整 ORDER BY 字段（立即生效）
+
+```sql
+SELECT ... 
+FROM warehouse_BoxFeeDetailHistories AS w
+LEFT JOIN warehouse_WarehouseBoxes AS w0 ON w.WhBoxId = w0.Id
+WHERE w.WarehouseId = 6923798304476504075
+  AND w.ShopId = 6955121677916565505
+  AND w.FeeType = 10
+  AND w.BeginTime >= '2025-12-31 00:00:00'
+  AND w.EndTime <= '2026-01-01 00:00:00'
+ORDER BY w.BeginTime, w.Id  -- 关键改动
+LIMIT 200;
+```
+
+**为什么有效：**
+- BeginTime 是分区键，优化器能充分利用分区裁剪
+- BeginTime 有索引，支持范围查询
+- 符合"分区键优先"的最佳实践
+
+### 方案二：强制使用索引（应急）
+
+```sql
+SELECT ... 
+FROM warehouse_BoxFeeDetailHistories AS w
+FORCE INDEX (BeginTime_idx)  -- 强制使用时间索引
+WHERE ...
+ORDER BY w.Id
+LIMIT 200;
+```
+
+### 方案三：优化索引设计（长期）
+
+创建包含所有查询条件的复合索引：
+
+```sql
+CREATE INDEX idx_optimal ON warehouse_BoxFeeDetailHistories (
+    WarehouseId,
+    ShopId,
+    FeeType,
+    BeginTime,
+    Id
+);
+```
+
+**注意**：在分区表上，索引是局部索引（每个分区独立），因此分区裁剪仍然重要。
+
+## 分区表优化关键原则
+
+### 1. ORDER BY 应优先使用分区键
+
+| ORDER BY 字段 | 分区裁剪效果 | 索引利用率 | 性能 |
+|--------------|------------|-----------|------|
+| 非分区键（Id） | ❌ 弱 | ⚠️ 主键索引 | 慢 |
+| 分区键（BeginTime） | ✅ 强 | ✅ 范围索引 | 快 |
+
+### 2. 分区表的执行计划特征
+
+```sql
+-- 观察分区裁剪情况
+EXPLAIN PARTITIONS SELECT ... ;
+```
+
+好的执行计划应该：
+- **partitions 数量少**：只扫描必要的分区
+- **type: range 或 ref**：使用索引范围扫描
+- **filtered 比例高**：过滤条件有效
+
+### 3. 分区策略与查询模式匹配
+
+本案例中：
+- **分区字段**：BeginTime（按年）
+- **常见查询**：按时间范围过滤
+- **最优排序**：ORDER BY BeginTime（与分区键一致）
+
+## 性能对比
+
+| 优化方案 | 执行时间 | type | key | rows | filtered | 提升 |
+|---------|---------|------|-----|------|----------|------|
+| ORDER BY Id | 15.0s | index | PRIMARY | 17,435 | 0.00% | 基准 |
+| ORDER BY BeginTime, Id | 0.4s | range | BeginTime_idx | 41,184 | 0.15% | **37.5x** |
+
+**看似矛盾的现象**：
+- 优化后 `rows` 更大（41,184 vs 17,435）
+- 但 `filtered` 更高（0.15% vs 0.00%）
+- 实际执行时间大幅缩短
+
+**原因**：
+- `rows` 是**预估**扫描行数，不是实际值
+- 优化后使用范围扫描，能快速跳过不符合条件的数据
+- 分区裁剪 + 索引条件下推 = 真正的性能提升
+
+## 核心要点
+
+1. **分区表的 ORDER BY 应优先考虑分区键**：充分利用分区裁剪和索引
+2. **EXPLAIN 的 rows 是预估值**：实际性能要看执行时间和 type
+3. **filtered 比例很重要**：反映索引和过滤条件的有效性
+4. **分区数量影响性能**：合理的分区策略能避免跨多个分区扫描
+5. **type: range > type: index**：范围扫描比全索引扫描更高效
+
+## 延伸思考
+
+### 如果必须按 Id 排序怎么办？
+
+**方案：子查询优化**
+
+```sql
+SELECT w.*, w0.InWarehouseTime, w0.InWarehousePlanNo
+FROM (
+    SELECT *
+    FROM warehouse_BoxFeeDetailHistories
+    WHERE WarehouseId = 6923798304476504075
+      AND ShopId = 6955121677916565505
+      AND FeeType = 10
+      AND BeginTime >= '2025-12-31 00:00:00'
+      AND EndTime <= '2026-01-01 00:00:00'
+    ORDER BY BeginTime, Id  -- 先用分区键排序
+    LIMIT 200
+) AS w
+LEFT JOIN warehouse_WarehouseBoxes AS w0 ON w.WhBoxId = w0.Id
+ORDER BY w.Id;  -- 再按 Id 排序
+```
+
+子查询先利用分区和索引过滤出 200 条，然后在小数据集上按 Id 排序，开销可控。
+
+## 总结
+
+在分区表场景下，**让 ORDER BY 字段与分区键保持一致**是最有效的优化策略。本案例通过简单调整排序字段，实现了 37.5 倍的性能提升，充分体现了分区表设计与查询模式匹配的重要性。
