@@ -3,6 +3,7 @@ layout: page
 title: C# 中什么时候该用 Task，什么时候该用 ValueTask？
 category: 技术
 tags: net
+---
 
 在现代 C# / .NET 开发中，`async/await` 已经成为日常编码的一部分，而 `Task` 几乎是所有异步方法的默认返回类型。
 
