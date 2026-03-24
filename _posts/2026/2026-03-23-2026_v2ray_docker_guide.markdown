@@ -105,16 +105,24 @@ v2ray/
 
 使用官方 GHCR 镜像（`ghcr.io`），比 Docker Hub 版本更新更及时。选用 `-extra` 后缀版本，内置了 `geoip.dat` 和 `geosite.dat` 路由规则数据文件。
 
+> 💡 **针对树莓派（ARM64）的特别注意**：
+> 如果你在树莓派（如 Pi 4/5）上部署，请务必执行 `uname -m` 确认架构（通常为 `aarch64`）。你需要在配置中显式指定 `platform: linux/arm64`。此外，为了更好的网络性能或解决某些网络隔离问题，建议使用 `network_mode: host`。
+
 ```yaml
 # ~/v2ray/docker-compose.yaml
 services:
   v2ray:
     image: ghcr.io/v2fly/v2ray:v5.46.0-extra
+    # 树莓派/ARM64 必须指定平台，否则可能报 exec format error
+    # platform: linux/arm64 
     container_name: v2ray
     restart: unless-stopped
+    # 方案 A：标准端口映射（适合大多数云服务器）
     ports:
       - "10808:10808"
       - "10809:10809"
+    # 方案 B：主机网络模式（树莓派推荐，无需配置 ports）
+    # network_mode: host
     volumes:
       - ./config:/etc/v2ray:ro
     command: run -c /etc/v2ray/config.json
@@ -127,7 +135,7 @@ services:
         max-file: "3"
 ```
 
-> ⚠️ 镜像版本已固定为 `v5.46.0-extra`，生产环境务必固定版本，避免自动升级带来兼容性风险。升级时修改 tag 后执行 `docker compose pull && docker compose up -d` 即可。
+> ⚠️ **注意**：如果启用了 `network_mode: host`，则 `ports` 配置将失效，可以将其删掉。镜像版本已固定为 `v5.46.0-extra`，生产环境务必固定版本。
 
 ### 2.3 编写 config/config.json
 
@@ -382,6 +390,15 @@ docker compose restart
 ### Q3：日志不断增长占满磁盘
 
 **解决**：在 `/etc/docker/daemon.json` 中配置全局日志上限（见第一章），并在 `docker-compose.yaml` 的 `logging` 字段单独为容器设置上限，两者均配置可双重保险。
+
+### Q4：启动报错 `exec format error`（常见于树莓派）
+
+**原因**：本地系统架构（如树莓派的 `aarch64`）与 Docker 镜像默认架构（通常为 `amd64`）不匹配。
+
+**解决**：
+1. 执行 `uname -m` 确认架构为 `aarch64`。
+2. 在 `docker-compose.yaml` 中添加 `platform: linux/arm64`。
+3. 删除旧镜像并重新拉取：`docker rmi <image_id>` 然后 `docker compose up -d`。
 
 ---
 
