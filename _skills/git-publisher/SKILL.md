@@ -9,11 +9,17 @@ description: 专门用于自动化 Git 变更的提交和推送。当用户提�
 
 ## 核心流程
 
-### 1. 检查状态 (Pre-check)
+### 1. 环境适配 (Environment Awareness)
+- **Shell 兼容性**：根据 `session_context` 判断操作系统。
+  - **Windows/PowerShell**：多条命令连接使用 `;` (例如 `git add . ; git status`)。
+  - **Linux/macOS/Bash**：多条命令连接使用 `&&`。
+- **极简沟通 (Minimal Output)**：严禁输出“我将现在开始...”、“我将分步执行...”等过程性废话。直接执行或仅简述意图。
+
+### 2. 检查状态 (Pre-check)
 - 运行 `git status` 确认变更。
 - 如果没有变更，告知用户并停止。
 
-### 2. 准备提交 (Stage & Commit)
+### 3. 准备提交 (Stage & Commit)
 - **暂存**：运行 `git add .`。
 - **智能分析**：使用 `git diff --name-only --cached` 查看暂存文件。
 - **提取关键信息**：
@@ -30,7 +36,7 @@ description: 专门用于自动化 Git 变更的提交和推送。当用户提�
   - **示例**：`feat: publish "Gemini CLI 技能创建指南" (2026-03-23)`。
 - **提交**：运行 `git commit -m "[合成的消息]"`。
 
-### 3. 推送 (Push)
+### 4. 推送 (Push)
 - 运行 `git push origin master`。
 
 ## 异常处理
