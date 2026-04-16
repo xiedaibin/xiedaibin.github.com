@@ -1,3 +1,13 @@
+---
+layout: post
+title: "用 PowerShell 配置文件优雅地调用 Gemini CLI"
+date: 2026-04-16 16:03:00 +0800
+categories: [技术, AI, PowerShell]
+tags: [Gemini, CLI, PowerShell, 代理配置]
+author: 谢代彬
+github: xiedaibin
+---
+
 # 用 PowerShell 配置文件优雅地调用 Gemini CLI
 
 > 一个字命令，搞定翻墙 + AI 调用，懒人必备配置。
