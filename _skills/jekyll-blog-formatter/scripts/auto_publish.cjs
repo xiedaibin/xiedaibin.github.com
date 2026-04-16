@@ -2,8 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-// 获取命令行参数：源文件路径
+// 获取命令行参数：源文件路径和可选的 Slug
 const sourceFile = process.argv[2];
+const customSlug = process.argv[3];
 if (!sourceFile) {
   console.error('Error: Source file path is required.');
   process.exit(1);
@@ -44,12 +45,20 @@ const month = String(now.getMonth() + 1).padStart(2, '0');
 const day = String(now.getDate()).padStart(2, '0');
 const dateStr = `${year}-${month}-${day}`;
 
-// 处理文件名（去除特殊字符，替换空格为下划线）
-const safeFileName = title.toLowerCase()
-  .replace(/[:：]/g, '')
-  .replace(/\s+/g, '_')
-  .replace(/[^\w\u4e00-\u9fa5]/g, '_')
-  .replace(/_+/g, '_');
+// 处理文件名（优先使用传入的 Slug，否则处理标题）
+let safeFileName = '';
+if (customSlug) {
+  safeFileName = customSlug.toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^\w-]/g, '_')
+    .replace(/_+/g, '_');
+} else {
+  safeFileName = title.toLowerCase()
+    .replace(/[:：]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/[^\w\u4e00-\u9fa5]/g, '_')
+    .replace(/_+/g, '_');
+}
 
 const targetFileName = `${dateStr}-${year}_${safeFileName}.markdown`;
 const targetDir = path.join('_posts', String(year));
@@ -89,8 +98,10 @@ try {
   const commitMsg = `feat: publish "${title}" (${dateStr})`;
   console.log(`🚀 Committing and pushing: ${commitMsg}`);
   
-  // 使用 ; 作为连接符 (适配 Windows)
-  execSync(`git add . ; git commit -m "${commitMsg.replace(/"/g, '\\"')}" ; git push origin master`, { stdio: 'inherit' });
+  // 分开执行以提高兼容性
+  execSync('git add .', { stdio: 'inherit' });
+  execSync(`git commit -m "${commitMsg.replace(/"/g, '\\"')}"`, { stdio: 'inherit' });
+  execSync('git push origin master', { stdio: 'inherit' });
   console.log('🏁 Successfully published to GitHub!');
 } catch (error) {
   console.error('❌ Git operation failed:', error.message);

@@ -11,11 +11,11 @@ description: 专门用于 Jekyll 博客文章的格式化、整理及一键发�
 当用户明确要求“整理并发布”某篇源文件时，**优先直接运行自动化脚本**。无需手动生成内容。
 
 - **脚本路径**：`_skills/jekyll-blog-formatter/scripts/auto_publish.cjs`
-- **用法**：使用 `node` 执行，传入源文件路径作为第一个参数。
-- **示例**：`node D:\MyGit\xiedaibin.github.com\_skills\jekyll-blog-formatter\scripts\auto_publish.cjs sourse/blog.md`
+- **用法**：使用 `node` 执行，传入源文件路径作为第一个参数，**传入英文 Slug (由标题翻译/概括) 作为第二个参数**。
+- **示例**：`node D:\MyGit\xiedaibin.github.com\_skills\jekyll-blog-formatter\scripts\auto_publish.cjs sourse/blog.md git_password_fix`
 - **脚本功能**：
   1. 自动从第一行一级标题提取 `title`。
-  2. 自动生成规范的文件名：`YYYY-MM-DD-YYYY_filename.markdown`。
+  2. 自动生成规范的文件名：`YYYY-MM-DD-YYYY_slug.markdown` (Slug 优先使用传入的英文标识)。
   3. 自动生成 YAML Front Matter。
   4. 自动创建年份目录并移动文件到 `_posts/YYYY/`。
   5. 自动删除原始源文件。

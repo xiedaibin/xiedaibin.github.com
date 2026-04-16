@@ -2,15 +2,9 @@
 layout: page
 title: "Git 推送报错 \"Password authentication is not supported\" 解决全过程"
 category: 技术
-tags: page, Git, Password, authentication, not, GitHub, SSH, git
+tags: Git, Password, authentication, not, GitHub, git, Invalid, username
 ---
 
----
-layout: page
-title: "Git 推送报错 'Password authentication is not supported' 解决全过程"
-category: 技术
-tags: [Git, GitHub, SSH, 认证, 推送]
----
 
 > 记录一次排查 GitHub 推送认证失败的完整过程，坑点不少，留存备忘。
 
