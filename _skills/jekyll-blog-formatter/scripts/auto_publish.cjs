@@ -20,12 +20,29 @@ if (!fs.existsSync(sourcePath)) {
 const content = fs.readFileSync(sourcePath, 'utf8');
 const lines = content.split('\n');
 
-// 2. 提取一级标题并移除之
+// 2. 提取一级标题并移除之（同时跳过现有的 Front Matter）
 let title = '';
 let bodyLines = [];
 let titleFound = false;
+let inFrontMatter = false;
+let frontMatterDone = false;
 
-for (let line of lines) {
+for (let i = 0; i < lines.length; i++) {
+  let line = lines[i];
+  
+  // 检测并跳过现有的 Front Matter
+  if (!frontMatterDone && i === 0 && line.trim() === '---') {
+    inFrontMatter = true;
+    continue;
+  }
+  if (inFrontMatter) {
+    if (line.trim() === '---') {
+      inFrontMatter = false;
+      frontMatterDone = true;
+    }
+    continue;
+  }
+
   if (!titleFound && line.startsWith('# ')) {
     title = line.substring(2).trim();
     titleFound = true;

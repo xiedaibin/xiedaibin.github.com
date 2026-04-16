@@ -1,4 +1,10 @@
-# 用 PowerShell 配置文件优雅地调用 Gemini CLI
+---
+layout: page
+title: "用 PowerShell 配置文件优雅地调用 Gemini CLI"
+category: 技术
+tags: post, PowerShell, Gemini, +0800, CLI, xiedaibin, Microsoft, profile
+---
+
 
 > 一个字命令，搞定翻墙 + AI 调用，懒人必备配置。
 
