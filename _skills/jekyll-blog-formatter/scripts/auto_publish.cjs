@@ -55,6 +55,12 @@ if (!title) {
   title = path.basename(sourceFile, path.extname(sourceFile));
 }
 
+// 安全校验：如果提取的正文为空，绝对不执行后续的删除和发布，防止破坏源文件
+if (bodyLines.length === 0 || bodyLines.join('').trim() === '') {
+  console.error('Error: Extracted body content is empty. Aborting to protect the source file from being deleted.');
+  process.exit(1);
+}
+
 // 3. 生成文件名和路径
 const now = new Date();
 const year = now.getFullYear();
@@ -115,8 +121,14 @@ try {
   const commitMsg = `feat: publish "${title}" (${dateStr})`;
   console.log(`🚀 Committing and pushing: ${commitMsg}`);
   
-  // 分开执行以提高兼容性
-  execSync('git add .', { stdio: 'inherit' });
+  // 精确 add 生成的目标文件，避免并发执行时误将其他未完成的源文件也一并 add 进去
+  execSync(`git add "${targetPath}"`, { stdio: 'inherit' });
+  // 如果源文件曾经被跟踪过，将其删除状态也一并暂存
+  try {
+    execSync(`git add "${sourcePath}"`, { stdio: 'inherit' });
+  } catch (e) {
+    // 忽略未被跟踪时的 add 错误
+  }
   execSync(`git commit -m "${commitMsg.replace(/"/g, '\\"')}"`, { stdio: 'inherit' });
   execSync('git push origin master', { stdio: 'inherit' });
   console.log('🏁 Successfully published to GitHub!');
