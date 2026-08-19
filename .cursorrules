@@ -1,0 +1,7 @@
+# Cursor Rules for xiedaibin.github.com
+
+Please follow all project standards, Jekyll formatting rules, and workflow mandates defined in AGENTS.md.
+
+- Always communicate in Chinese.
+- Blog posts must be placed in `_posts/YYYY/` as `YYYY-MM-DD-YYYY_filename.markdown`.
+- Jekyll Front Matter `title` must always be wrapped in double quotes.
