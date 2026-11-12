@@ -2,7 +2,7 @@
 layout: post
 title: "内存的频率与时序：DDR4 和 DDR5 到底差在哪"
 categories: [技术]
-tags: [DDR4, DDR5, 6000, CL18, CL40, DDR, 3000, DRAM]
+tags: [DDR4, DDR5, "6000", CL18, CL40, DDR, "3000", DRAM]
 ---
 
 

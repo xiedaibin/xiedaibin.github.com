@@ -103,7 +103,11 @@ for (const rawTag of tagsMatch) {
   if (uniqueTags.length >= 8) break;
 }
 
-const formatYamlTag = (t) => (/[:#\[\]\{\},&\*\?\|<>=!%@`"']/.test(t) ? `"${t.replace(/"/g, '\\"')}"` : t);
+const needsYamlQuotes = (t) =>
+  /[:#\[\]\{\},&\*\?\|<>=!%@`"']/.test(t) ||
+  /^[+-]?(?:\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|0[xXoObB][0-9a-fA-F_]+)$/.test(t) ||
+  /^(?:true|false|null|yes|no|on|off|~)$/i.test(t);
+const formatYamlTag = (t) => (needsYamlQuotes(t) ? `"${t.replace(/"/g, '\\"')}"` : t);
 const tagsStr = uniqueTags.map(formatYamlTag).join(', ');
 const hasMermaid = /```mermaid\b/.test(bodyLines.join('\n'));
 
