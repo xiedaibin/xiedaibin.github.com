@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   在WinForms应用程序中实现关闭并重启功能
-category: 技术
-tags: sqlite
+layout: post
+title: 在WinForms应用程序中实现关闭并重启功能
+categories: [技术]
+tags: [sqlite]
 ---
-{% include JB/setup %}
 
 在WinForms开发过程中，有时需要实现关闭并重启应用程序的功能。例如，当应用程序需要应用某些配置更改时，重启可以确保新配置生效。然而，如果应用程序使用了`Mutex`来确保单实例运行，这个过程会稍微复杂一些。本文将介绍一种专业的方法，通过延迟启动新实例来确保当前实例完全关闭后再启动新实例。
 

@@ -1,8 +1,9 @@
 ---
-layout: page
+layout: post
 title: "FastGPT 企业级 RAG 性能调优指南"
-category: 技术
-tags: FastGPT, RAG, Rerank, Embedding, Hybrid, Flow
+categories: [技术]
+tags: [FastGPT, RAG, Rerank, Embedding, Hybrid, Flow]
+math: true
 ---
 
 本指南专注于在 FastGPT 或同类应用层平台上，如何通过高级工程手段、数据清洗、检索架构优化以及工作流编排，全面提升知识库系统的回答准确率。

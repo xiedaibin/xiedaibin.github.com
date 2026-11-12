@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: docker compose 启动
-category: 工具
-tags: Docker
+categories: [工具]
+tags: [Docker]
 ---
-{% include JB/setup %}
 
 
 ### 一些常用服务使用docker compose 启动

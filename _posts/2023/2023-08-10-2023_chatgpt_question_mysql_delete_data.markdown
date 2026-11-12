@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: 与 chatgpt 探讨删除mysql数据
-category: 技术
-tags: ChatGPT问答 mysql
+categories: [技术]
+tags: [ChatGPT问答, MySQL]
 ---
-{% include JB/setup %}
 
 ### 背景
 数据库中大量数据删除，不能一下子全部删除，很可能卡死。已有的经验告诉我有两种方式。第一种是少量多次,批量的一次次删直到删完。第二种时停机，然后将需要的数据导入到新表，再删除旧表，再把新表换成旧表的名称。（这种方式针对表数据非常多,删除时产生很多日志，删除也很慢的情况）

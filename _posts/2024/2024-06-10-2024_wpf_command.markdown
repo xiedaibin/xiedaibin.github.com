@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: Command和Click是在WPF中区别
-category: 技术
-tags: wpf
+categories: [技术]
+tags: [wpf]
 ---
-{% include JB/setup %}
 
 `Command` 和 `Click` 是在 WPF 中处理用户交互的两种不同方式，各有其优点和适用场景。下面我们来详细比较它们的区别和使用场景。
 

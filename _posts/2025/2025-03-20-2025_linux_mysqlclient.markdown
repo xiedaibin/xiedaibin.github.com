@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: CentOS 7.9 安装 MySQL 8.0 客户端指南
-category: 技术
-tags: mysql
+categories: [技术]
+tags: [MySQL]
 ---
 
 在 CentOS 7.9 上安装 MySQL 8.0 客户端可以通过 MySQL 官方提供的 YUM 存储库进行，以下是详细的安装步骤。

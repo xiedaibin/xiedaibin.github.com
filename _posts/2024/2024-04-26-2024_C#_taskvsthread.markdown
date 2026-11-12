@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  Task.Run  和 new Thread 有什么区别
-category: 技术
-tags: C#
+layout: post
+title: Task.Run  和 new Thread 有什么区别
+categories: [技术]
+tags: ["C#"]
 ---
-{% include JB/setup %}
 
 `Task.Run`和`new Thread`都可以用来在不同的线程中执行代码，但它们之间有几个重要的区别：
 

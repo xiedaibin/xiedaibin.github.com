@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   检查私钥 id_rsa 和公钥 id_rsa.pub 是否匹配
-category: 技术
-tags: 前端
+layout: post
+title: 检查私钥 id_rsa 和公钥 id_rsa.pub 是否匹配
+categories: [技术]
+tags: [前端]
 ---
-{% include JB/setup %}
 ###
 
 要检查你的私钥 `id_rsa` 和公钥 `id_rsa.pub` 是否匹配（即它们是否是一对），你可以使用以下方法：

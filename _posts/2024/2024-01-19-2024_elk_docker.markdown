@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: ELK简单介绍以及docker安装ek服务端
-category: 技术
-tags: elk
+categories: [技术]
+tags: [elk]
 ---
-{% include JB/setup %}
 
 
 ### ELK 是一个由三个开源软件组成的集合，用于实时日志数据的收集、搜索、分析和可视化。ELK 代表以下三个组件：

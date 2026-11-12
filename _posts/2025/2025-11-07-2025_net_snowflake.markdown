@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 雪花算法升级实践：从 Snowflake 到 SnowflakeV2，确保 ID 增长不溢出
-category: 技术
-tags: net
+categories: [技术]
+tags: [NET]
 ---
 
 

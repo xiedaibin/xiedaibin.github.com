@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "Python yield 完全指南：七大核心使用场景"
-category: 技术
-tags: page, Python, yield, Lazy, python, import, sys, def
+categories: [技术]
+tags: [page, Python, yield, Lazy, import, sys, def]
 ---
 
 ---

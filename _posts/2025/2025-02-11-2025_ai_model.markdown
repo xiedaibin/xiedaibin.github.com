@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 大模型中的模型是什么概念，对应的实物体现是什么，是代码吗？
-category: 技术
-tags: ai
+categories: [技术]
+tags: [AI]
 ---
 
 在大模型领域，“模型”是一个核心概念，其内涵和实物体现可以从以下几个层面理解：

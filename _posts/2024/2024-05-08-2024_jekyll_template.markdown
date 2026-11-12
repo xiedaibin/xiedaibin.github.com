@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  更换一个Jekyll模版应该如何做
-category: 技术
-tags: Jekyll
+layout: post
+title: 更换一个Jekyll模版应该如何做
+categories: [技术]
+tags: [Jekyll]
 ---
-{% include JB/setup %}
 
 更换Jekyll模板需要一些步骤，但并不复杂。以下是一般的步骤：
 

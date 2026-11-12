@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 国内 Ubuntu 24.04 环境下快速安装 Docker
-category: 技术
-tags: docker
+categories: [技术]
+tags: [Docker]
 ---
 
 在国内环境中直接使用 Docker 官方源经常会遇到连接缓慢或失败的问题，因此本文将介绍如何在 **Ubuntu 24.04** 上通过 **国内镜像源** 快速且稳定地安装 Docker，并配置加速器。

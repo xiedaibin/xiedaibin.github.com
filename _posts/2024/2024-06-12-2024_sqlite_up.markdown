@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   数据库版本控制：确保客户端 SQLite 数据库的安全升级
-category: 技术
-tags: sqlite
+layout: post
+title: 数据库版本控制：确保客户端 SQLite 数据库的安全升级
+categories: [技术]
+tags: [sqlite]
 ---
-{% include JB/setup %}
 
 ### 数据库版本控制：确保客户端 SQLite 数据库的安全升级
 

@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: ASP.NET Core + ABP 使用 Redis 的最佳实践：连接复用、缓存、Data Protection 密钥共享与分布式锁完整配置示例
-category: 工具
-tags: ABP
+categories: [工具]
+tags: [ABP]
 ---
 
 在实际生产环境中，Redis 不仅用于缓存，还经常承担连接复用、Session/Cookie 加解密密钥共享（Data Protection）、分布式锁等核心职责。本文记录了我最终采用的一套完整 Redis 配置方案，并总结了优化过程中的关键点，供团队及他人参考。

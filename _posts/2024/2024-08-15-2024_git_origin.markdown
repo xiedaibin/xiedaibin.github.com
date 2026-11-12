@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   更新远程 Git 仓库地址及推送未提交的本地修改
-category: 技术
-tags: git
+layout: post
+title: 更新远程 Git 仓库地址及推送未提交的本地修改
+categories: [技术]
+tags: [Git]
 ---
-{% include JB/setup %}
 
 在日常开发过程中，远程 Git 仓库的地址有时会发生变化。当仓库地址变更时，我们可能仍有未推送的本地提交。为了确保这些本地修改顺利推送到新的远程仓库地址，我们需要做一些调整。在本文中，我将详细介绍如何处理这种情况。
 

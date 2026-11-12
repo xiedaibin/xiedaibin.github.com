@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: ABP 中如何让前端取消 API 请求，但后端任务继续执行
-category: 技术
-tags: abp
+categories: [技术]
+tags: [ABP]
 ---
 
 在 ABP / ASP.NET Core 中，默认情况下：

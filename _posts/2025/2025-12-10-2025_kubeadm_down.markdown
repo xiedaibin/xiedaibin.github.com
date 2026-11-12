@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 排查与解决：单节点 kubeadm 集群无法启动的完整指南
-category: 工具
-tags: ABP
+categories: [工具]
+tags: [ABP]
 ---
 单节点 Kubernetes 集群（基于 kubeadm）中，有时我们会遇到集群突然无法启动、关键组件全部退出的情况，例如：
 

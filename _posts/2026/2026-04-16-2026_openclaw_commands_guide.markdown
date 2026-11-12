@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "OpenClaw 常用指令全指南（速查手册）"
-category: 技术
-tags: OpenClaw, CLI, openclaw, gateway, logs, ###, Logs, follow
+categories: [技术]
+tags: [OpenClaw, CLI, Gateway, Logs, follow]
 ---
 
 

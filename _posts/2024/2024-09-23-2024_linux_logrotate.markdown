@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   使用 logrotate 管理日志文件的最佳实践
-category: 工具
-tags: windows
+layout: post
+title: 使用 logrotate 管理日志文件的最佳实践
+categories: [工具]
+tags: [Windows]
 ---
-{% include JB/setup %} 
 
 在日常运维中，日志文件的管理是至关重要的一环。随着时间的推移，日志文件可能会占用大量磁盘空间，影响系统的性能和可用性。`logrotate` 是一个强大的工具，能够自动轮转、压缩、删除和邮件发送日志文件。本文将介绍 `logrotate` 的基本用法及最佳实践。
 

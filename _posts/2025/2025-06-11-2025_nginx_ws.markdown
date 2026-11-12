@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Nginx 代理 WebSocket 所需的关键配置说明
-category: 技术
-tags: nginx
+categories: [技术]
+tags: [Nginx]
 ---
 
 # Nginx 配置代理 WebSocket 的关键参数解析

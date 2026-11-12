@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: A2A 与 Skill：多智能体时代的架构分层与协作模式
-category: 技术
-tags: agent
+categories: [技术]
+tags: [Agent]
 ---
 
 在 AI Agent 快速演进的今天，我们越来越频繁地听到两个概念：

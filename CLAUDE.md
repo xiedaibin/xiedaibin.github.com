@@ -5,5 +5,5 @@ Please adhere strictly to all project rules, Jekyll publishing standards, and wo
 ## Key Directives
 - **Language**: Always communicate in Chinese (必须始终使用中文进行交流).
 - **Post Location**: Store blog posts under `_posts/YYYY/` using `YYYY-MM-DD-YYYY_filename.markdown`.
-- **Front Matter**: Always wrap the `title` in double quotes (e.g. `title: "标题"`), layout is `page`.
+- **Front Matter**: Always wrap the `title` in double quotes (e.g. `title: "标题"`), layout is `post`, categories is `[技术]`, and tags is a YAML list (`[...]`).
 - **Skills & Scripts**: Refer to `.agents/skills/` and `_skills/` for automation utilities.

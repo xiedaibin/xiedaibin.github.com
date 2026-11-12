@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: 基于Kubeadm的Kubernetes集群搭建(containerd)(CentOS7)
-category: 技术
-tags: 技术
+categories: [技术]
+tags: [技术]
 ---
-{% include JB/setup %}
 ## 环境
 系统：Centos7   
 kubernetes：v1.26.0     

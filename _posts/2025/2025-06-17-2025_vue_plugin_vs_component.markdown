@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Vue插件 vs 组件二次封装对比分析
-category: 技术
-tags: vue
+categories: [技术]
+tags: [vue]
 ---
 
 ## 1. 基本概念区别
@@ -165,6 +165,7 @@ const ChartPlugin = {
 
 ### 4.2 组件二次封装适用场景
 
+{% raw %}
 ```vue
 <!-- 场景1: UI库组件定制 -->
 <template>
@@ -223,6 +224,7 @@ const ChartPlugin = {
   </div>
 </template>
 ```
+{% endraw %}
 
 ## 5. 架构设计考虑
 
@@ -278,6 +280,7 @@ function installGlobalProperties(app, config) {
 
 ### 5.2 组件封装设计原则
 
+{% raw %}
 ```vue
 <template>
   <!-- 好的组件封装设计 -->
@@ -323,6 +326,7 @@ defineOptions({
 })
 </script>
 ```
+{% endraw %}
 
 ## 6. 选择建议
 

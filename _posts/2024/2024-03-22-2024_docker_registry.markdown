@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  部署安全的 Docker Registry
-category: 技术
-tags: docker
+layout: post
+title: 部署安全的 Docker Registry
+categories: [技术]
+tags: [Docker]
 ---
-{% include JB/setup %}
 
 ### 部署安全的 Docker Registry
 

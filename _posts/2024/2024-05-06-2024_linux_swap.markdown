@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  优化 Linux 系统性能：调整交换空间使用策略
-category: 技术
-tags: Linux
+layout: post
+title: 优化 Linux 系统性能：调整交换空间使用策略
+categories: [技术]
+tags: [Linux]
 ---
-{% include JB/setup %}
 
 在管理 Linux 系统时，优化内存使用是提高系统性能的重要一环。Linux 内核提供了一个名为 `swappiness` 的参数，允许管理员调整系统对交换空间的使用策略，以满足不同工作负载下的需求。本文将介绍如何有效地调整 `swappiness` 值以优化系统性能。
 

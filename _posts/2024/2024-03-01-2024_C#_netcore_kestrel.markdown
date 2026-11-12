@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  解决ASP.NET Core上传大文件报502错误的方法
-category: 技术
-tags: netcore
+layout: post
+title: 解决ASP.NET Core上传大文件报502错误的方法
+categories: [技术]
+tags: [netcore]
 ---
-{% include JB/setup %}
 
 在使用ASP.NET Core提供的上传接口时，有时会碰到上传较大文件时出现502错误的情况。经过查询发现，这是由于ASP.NET Core自带的Kestrel服务器对上传文件大小进行了限制。为了解决这个问题，我们需要对Kestrel服务器进行相应的配置。
 

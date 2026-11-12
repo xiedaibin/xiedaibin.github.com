@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "Dockerfile 中 `dotnet build` + `dotnet publish` 的真相"
-category: 技术
-tags: Dockerfile, dotnet, dockerfile, RUN, build, Release, publish, Visual
+categories: [技术]
+tags: [Dockerfile, dotnet, RUN, build, Release, publish, Visual]
 ---
 
 

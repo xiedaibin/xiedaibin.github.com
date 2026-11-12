@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  ABP分布式锁的使用指南
-category: 技术
-tags: abp
+layout: post
+title: ABP分布式锁的使用指南
+categories: [技术]
+tags: [ABP]
 ---
-{% include JB/setup %}
 
 分布式锁在构建分布式系统中起着至关重要的作用，它能够确保在分布式环境下对共享资源进行安全的访问和操作。本文将介绍如何在ABP框架中使用分布式锁，并提供相应的示例和参考链接。
 

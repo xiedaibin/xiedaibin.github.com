@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  Ubuntu安装Java
-category: 技术
-tags: Ubuntu
+layout: post
+title: Ubuntu安装Java
+categories: [技术]
+tags: [Ubuntu]
 ---
-{% include JB/setup %}
 
 以下是使用OpenJDK 8安装Java的步骤：
 

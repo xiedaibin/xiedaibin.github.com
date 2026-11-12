@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   在 VMware 虚拟机中执行磁盘收缩操作
-category: 技术
-tags: VMware
+layout: post
+title: 在 VMware 虚拟机中执行磁盘收缩操作
+categories: [技术]
+tags: [VMware]
 ---
-{% include JB/setup %}
 
 # 在 VMware 虚拟机中执行磁盘收缩操作
 

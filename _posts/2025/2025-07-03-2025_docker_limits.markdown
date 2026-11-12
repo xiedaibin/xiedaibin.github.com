@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Docker 容器资源限制验证指南
-category: 技术
-tags: docker
+categories: [技术]
+tags: [Docker]
 ---
 
 在生产环境中，为 Docker 容器设置资源限制是确保系统稳定性的重要手段。本文将详细介绍如何验证 Docker Compose 中的资源限制配置是否真正生效。

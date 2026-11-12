@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: linux 内存不够用能通过存储换内存
-category: linux
-tags: linux
+categories: [linux]
+tags: [Linux]
 ---
-{% include JB/setup %}
 
 是的，Linux 系统可以使用交换空间（Swap）来作为虚拟内存，从而扩展可用内存。当物理内存不足时，系统会将一些不活跃的数据移到交换空间中，以便给活跃的进程提供更多的物理内存。这样可以避免系统因内存不足而变得不稳定或崩溃。
 

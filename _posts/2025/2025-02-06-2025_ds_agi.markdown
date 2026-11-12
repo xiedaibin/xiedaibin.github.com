@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: DeepSeek问答程序员AGI时代如何应对
-category: 其他
-tags: DeepSeek
+categories: [其他]
+tags: [DeepSeek]
 ---
 
 在AGI（通用人工智能）时代，技术范式将发生深刻变革，但你的技术背景和行业经验仍会是核心优势。以下是结合你的技能和业务领域的具体建议，帮助你把握机遇、实现长期发展：

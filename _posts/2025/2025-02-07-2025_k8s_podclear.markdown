@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Kubernetes 中如何清理 READY 状态为 0 的 Pod
-category: 技术
-tags: k8s
+categories: [技术]
+tags: [K8s]
 ---
 
 在 Kubernetes 集群中，Pod 作为最小的部署单元，应该处于 **READY** 状态才能正常运行。然而，有时某些 Pod 的 **READY** 状态为 0，表示其中的容器未准备就绪，可能导致应用不可用。  

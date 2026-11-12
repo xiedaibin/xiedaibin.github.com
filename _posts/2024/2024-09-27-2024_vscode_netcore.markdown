@@ -1,8 +1,8 @@
 ---
-layout: page
-title:   Visual Studio Code launch.json 和 tasks.json 配置文件详解
-category: 工具
-tags: vscode
+layout: post
+title: Visual Studio Code launch.json 和 tasks.json 配置文件详解
+categories: [工具]
+tags: [vscode]
 ---
 
 在开发 .NET Core 应用时，`launch.json` 和 `tasks.json` 是两个非常重要的配置文件，它们分别用于定义调试和任务执行的相关设置。本文将通过实例详细介绍这两个文件的配置和用途。

@@ -87,20 +87,39 @@ const targetFileName = `${dateStr}-${year}_${safeFileName}.markdown`;
 const targetDir = path.join('_posts', String(year));
 const targetPath = path.join(targetDir, targetFileName);
 
-// 4. 提取标签 (简单逻辑：从正文中提取英文词组，或固定常用)
-const tagsMatch = content.match(/[A-Za-z0-9+#]+(?=\s|,|\.)/g) || [];
-const uniqueTags = [...new Set(tagsMatch.filter(t => t.length > 2 && !['the', 'and', 'for', 'with'].includes(t.toLowerCase())))].slice(0, 8);
-const tagsStr = uniqueTags.join(', ');
+// 4. 提取标签 (过滤 Markdown 符号与纯数字，大小写去重并输出标准 YAML 数组)
+const stopWords = new Set(['the', 'and', 'for', 'with', 'that', 'this', 'from', 'post', 'page']);
+const tagsMatch = content.match(/[A-Za-z][A-Za-z0-9+#.-]*(?=\s|,|\.|$)/g) || [];
+const seenTags = new Set();
+const uniqueTags = [];
+for (const rawTag of tagsMatch) {
+  const tag = rawTag.replace(/[.-]+$/, '');
+  if (tag.length <= 2 || stopWords.has(tag.toLowerCase())) continue;
+  const key = tag.toLowerCase();
+  if (!seenTags.has(key)) {
+    seenTags.add(key);
+    uniqueTags.push(tag);
+  }
+  if (uniqueTags.length >= 8) break;
+}
+
+const formatYamlTag = (t) => (/[:#\[\]\{\},&\*\?\|<>=!%@`"']/.test(t) ? `"${t.replace(/"/g, '\\"')}"` : t);
+const tagsStr = uniqueTags.map(formatYamlTag).join(', ');
+const hasMermaid = /```mermaid\b/.test(bodyLines.join('\n'));
 
 // 5. 构造 Front Matter 和新内容
-const frontMatter = `---
-layout: page
-title: "${title.replace(/"/g, '\\"')}"
-category: 技术
-tags: ${tagsStr}
----
-
-`;
+const frontMatterLines = [
+  '---',
+  'layout: post',
+  `title: "${title.replace(/"/g, '\\"')}"`,
+  'categories: [技术]',
+  `tags: [${tagsStr}]`,
+];
+if (hasMermaid) {
+  frontMatterLines.push('mermaid: true');
+}
+frontMatterLines.push('---', '', '');
+const frontMatter = frontMatterLines.join('\n');
 
 const finalContent = frontMatter + bodyLines.join('\n');
 

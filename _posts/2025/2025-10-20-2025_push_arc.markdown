@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 一键推送 Docker Hub 镜像到阿里云镜像仓库（含完整脚本）
-category: 技术
-tags: Docker
+categories: [技术]
+tags: [Docker]
 ---
 
 

@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: Git Tag 使用总结
-category: 常用命令
-tags: Github
+categories: [常用命令]
+tags: [GitHub]
 ---
-{% include JB/setup %}
 
 
 ## 一、什么是 Git Tag

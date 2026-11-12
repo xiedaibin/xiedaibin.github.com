@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: ASP.NET Core 使用 `urls` 监听端口，并通过代码设置 HTTPS 证书
-category: 技术
-tags: docker
+categories: [技术]
+tags: [Docker]
 ---
 
 在 ASP.NET Core 中，我们通常可以通过两种方式配置 Kestrel 服务器监听的地址和端口：

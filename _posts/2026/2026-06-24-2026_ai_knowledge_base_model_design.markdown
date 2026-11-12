@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "AI 知识库底层模型与框架设计指南"
-category: 技术
-tags: vLLM, SGLang, llama.cpp, TensorRT-LLM, Ollama, Xinference, Embedding, Vector
+categories: [技术]
+tags: [vLLM, SGLang, llama.cpp, TensorRT-LLM, Ollama, Xinference, Embedding, Vector]
 ---
 
 本技术指南旨在梳理企业级 AI 知识库（RAG 系统）底层的关键基础设施，涵盖大模型推理框架、模型托管调度平台、向量模型与向量数据库的分工协作机制。

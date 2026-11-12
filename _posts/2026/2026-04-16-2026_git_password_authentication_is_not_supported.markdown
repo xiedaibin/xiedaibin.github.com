@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "Git 推送报错 \"Password authentication is not supported\" 解决全过程"
-category: 技术
-tags: Git, Password, authentication, not, GitHub, git, Invalid, username
+categories: [技术]
+tags: [Git, Password, authentication, not, GitHub, Invalid, username]
 ---
 
 

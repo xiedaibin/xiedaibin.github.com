@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: ReadOnlySpan<char>和string有什么区别
-category: 技术
-tags: C#
+categories: [技术]
+tags: ["C#"]
 ---
 
 `ReadOnlySpan<char>` 和 `string` 都用于表示字符序列，但它们在设计和用途上有一些显著的区别。以下是这两者的主要区别：

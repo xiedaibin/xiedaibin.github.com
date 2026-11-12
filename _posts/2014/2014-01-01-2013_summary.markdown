@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: 我的2013年总结
-category: 总结
-tags: 技术
+categories: [总结]
+tags: [技术]
 ---
-{% include JB/setup %}
 　　又到一年年底了，时间慢得时候总觉得无奈，快得时候又有些让我们措手不及。比如现在，又一年了，我又学到什么了呢，又有那些需要改进得地方呢，回顾下吧。
 
 　　*   工作  

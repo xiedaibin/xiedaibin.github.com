@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: MySQL InnoDB 死锁案例分析与优化：UPDATE 嵌套子查询导致的锁冲突
-category: 技术
-tags: mysql
+categories: [技术]
+tags: [MySQL]
 ---
 
 ## 死锁排查

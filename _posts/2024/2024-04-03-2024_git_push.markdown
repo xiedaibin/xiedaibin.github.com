@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  git强制推送
-category: 技术
-tags: git
+layout: post
+title: git强制推送
+categories: [技术]
+tags: [Git]
 ---
-{% include JB/setup %}
 
 要添加一个远程 Git 地址并强制覆盖代码，你可以按照以下步骤操作 ：
 

@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: SKU ID、SKC ID 和 SPU ID 详解
-category: 其他
-tags: 其他
+categories: [其他]
+tags: [其他]
 ---
 
 在电商平台中，SKU ID、SKC ID 和 SPU ID 是商品管理中常用的三种标识符。它们分别代表不同层级的商品信息，有助于优化库存管理和销售分析。以下是对这三者的详细解释：

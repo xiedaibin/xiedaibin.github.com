@@ -1,8 +1,8 @@
 ---
-layout: page
-title:  JavaScript 中的 `const` 与 C# 中的 `const` 对比分析
-category: 技术
-tags: js dotnet
+layout: post
+title: JavaScript 中的 `const` 与 C# 中的 `const` 对比分析
+categories: [技术]
+tags: [js, dotnet]
 ---
 
 在编程语言中，`const` 关键字通常用于声明常量，其值在程序执行过程中不可修改。尽管 JavaScript 和 C# 都有 `const`，但是两者在语法、行为以及应用场景上有所不同。本文将对比分析 JavaScript 和 C# 中 `const` 的主要区别，帮助开发者更好地理解和使用这两个语言中的常量。

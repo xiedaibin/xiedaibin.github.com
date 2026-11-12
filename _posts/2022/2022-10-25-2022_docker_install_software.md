@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: Docker 安装常用软件
-category: 技术
-tags: Docker
+categories: [技术]
+tags: [Docker]
 ---
-{% include JB/setup %}
 
 ## Mysql
 ~~~ PowerShell   

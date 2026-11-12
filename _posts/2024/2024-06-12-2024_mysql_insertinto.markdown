@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   使用MySQL将A表中存在但B表中不存在的数据插入到B表中的方法
-category: 技术
-tags: mysql
+layout: post
+title: 使用MySQL将A表中存在但B表中不存在的数据插入到B表中的方法
+categories: [技术]
+tags: [MySQL]
 ---
-{% include JB/setup %}
 
 ###
 

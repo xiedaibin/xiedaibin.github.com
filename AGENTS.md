@@ -7,7 +7,7 @@
 - **操作安全**：严禁在未授权的情况下提交敏感信息，所有 Git 提交需符合语义化规范。
 
 ## 2. 项目定位
-本项目是 **xiedaibin 的个人技术博客**，基于 Jekyll 构建。
+本项目是 **xiedaibin 的个人技术博客**（`https://19920625.xyz`），基于 Jekyll 4 + **Chirpy (`jekyll-theme-chirpy`)** 主题构建，并通过 `.github/workflows/pages-deploy.yml` 使用 GitHub Actions 自动部署至 GitHub Pages。
 
 ## 3. 博客发布标准 (Mandatory)
 
@@ -18,10 +18,11 @@
 
 ### 3.2 YAML Front Matter 规范
 所有生成的博文必须包含以下标头，且格式必须严谨：
-- `layout`: 始终设为 `page`。
+- `layout`: 始终设为 `post`。
 - `title`: **必须始终使用双引号包裹**（例如 `title: "我的文章标题"`），以防止冒号导致的解析错误。
-- `category`: 默认设为 `技术`。
-- `tags`: 根据内容自动提取关键技术标签。
+- `categories`: 默认设为 `[技术]`。
+- `tags`: 标准 YAML 数组格式（例如 `tags: [Docker, Nginx]`），根据内容自动提取关键技术标签；含 `#` 等特殊字符的标签需加双引号（如 `"C#"`）。
+- 如文章正文中包含 `{{ ... }}` 模板语法（如 Vue 代码示例），需使用 `{% raw %}...{% endraw %}` 包裹以避免 Liquid 解析冲突。
 
 ## 4. 自动化技能 (Agent Skills)
 

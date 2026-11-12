@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 使用 VS2022 打包 .NET 8 WinForms 应用 MSI 并解决 WebView2 权限问题
-category: 技术
-tags: docker
+categories: [技术]
+tags: [Docker]
 ---
 
 在将 .NET 8 WinForms 程序通过 **Visual Studio Installer Project (vdproj)** 打包成 MSI 时，我遇到了一系列问题，从快捷方式指向 DLL，到 WebView2 无法正常启动。经过多次尝试，最终成功解决。这里记录一下完整过程和关键点，供参考。

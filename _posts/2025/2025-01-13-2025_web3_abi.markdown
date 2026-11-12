@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Web3 中的 ABI 是什么
-category: 技术
-tags: web3
+categories: [技术]
+tags: [web3]
 ---
 
 在 Web3 世界，尤其是以太坊智能合约生态系统中，**ABI（Application Binary Interface，应用程序二进制接口）**是一个至关重要的概念。本文将详细解析 ABI 的定义、结构及其重要性。

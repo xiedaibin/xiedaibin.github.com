@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 当第三方库中的同名类引发冲突：从禁用旧类到使用 `extern alias` 的完整解决方案
-category: 技术
-tags: net
+categories: [技术]
+tags: [NET]
 ---
 
 

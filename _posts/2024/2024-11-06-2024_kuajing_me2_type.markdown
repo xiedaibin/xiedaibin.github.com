@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Mercado Envíos 2 物流模式下的 `type` 配置详解
-category: 跨境
-tags: 其他
+categories: [跨境]
+tags: [其他]
 ---
 
 在 Mercado Libre（美客多）平台的 Mercado Envíos 2 物流系统中，`mode` 设置为 `"me2"` 时，可通过不同的 `type` 类型来选择最适合的物流方式。本文将逐一解析 `type` 的常用配置项，帮助卖家根据自身情况优化配送流程。

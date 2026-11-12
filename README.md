@@ -1,12 +1,24 @@
-**About**
+# XDB's Blog
 
-该博客是使用Jekyll-Bootstrap搭建的技术博客。
+记录生活，记录感悟 —— 谢代彬的个人技术博客（[https://19920625.xyz](https://19920625.xyz)）。
 
-**Jekyll-Bootstrap Documentation Website.**
+本项目使用 **Jekyll 4** 与 [**Chirpy (`jekyll-theme-chirpy`)**](https://github.com/cotes2020/jekyll-theme-chirpy) 主题构建，并通过 GitHub Actions 自动构建部署至 GitHub Pages。
 
-文档在<http://jekyllbootstrap.com>。源代码在https://github.com/plusjade/jekyllbootstrap.com
+## 本地运行与校验
 
+需要 Ruby（`>= 3.1`）与 Bundler 环境：
+
+```bash
+bundle install
+bundle exec jekyll s -l
+```
+
+构建与静态链接检查：
+
+```bash
+bash tools/test.sh
+```
 
 ## License
 
-[MIT](http://opensource.org/licenses/MIT)
+[MIT](https://opensource.org/licenses/MIT)

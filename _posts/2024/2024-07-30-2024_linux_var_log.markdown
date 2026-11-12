@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   如何安全地清空或删除 /var/log 下的 mysqld.log 和 journal 日志文件
-category: 技术
-tags: Linux
+layout: post
+title: 如何安全地清空或删除 /var/log 下的 mysqld.log 和 journal 日志文件
+categories: [技术]
+tags: [Linux]
 ---
-{% include JB/setup %}
 
 在 Linux 系统中，日志文件可以迅速占用大量磁盘空间，尤其是数据库日志（如 `mysqld.log`）和系统日志（如 `journal`）。如果这些日志文件过大，可能会影响系统性能和可用空间。本文将介绍如何安全地清空或删除 `/var/log` 下的 `mysqld.log` 和 `journal` 文件，以便有效管理磁盘空间。
 

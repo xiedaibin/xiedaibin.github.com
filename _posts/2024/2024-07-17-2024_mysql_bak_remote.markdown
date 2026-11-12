@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   同步备份还原线上数据库脚本并还原到本地
-category: 技术
-tags: Shell Mysql
+layout: post
+title: 同步备份还原线上数据库脚本并还原到本地
+categories: [技术]
+tags: [Shell, MySQL]
 ---
-{% include JB/setup %}
 
 ## 
 

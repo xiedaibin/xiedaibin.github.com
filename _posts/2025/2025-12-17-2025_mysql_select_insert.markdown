@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 根据 Shop No 批量变更合作伙伴并记录变更日志（my Sql 实战）
-category: 技术
-tags: mysql
+categories: [技术]
+tags: [MySQL]
 ---
 
 ## 背景

@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 使用 Docker Compose 安装 Apache Superset
-category: 工具
-tags: Superset
+categories: [工具]
+tags: [Superset]
 ---
 
 ## 安装步骤

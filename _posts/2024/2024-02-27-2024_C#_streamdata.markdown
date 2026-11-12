@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  asp.net core 写一个流式返回，并用js await fetch 接收并输出 的例子
-category: C#
-tags: web
+layout: post
+title: asp.net core 写一个流式返回，并用js await fetch 接收并输出 的例子
+categories: ["C#"]
+tags: [web]
 ---
-{% include JB/setup %}
 
 服务端代码：
 

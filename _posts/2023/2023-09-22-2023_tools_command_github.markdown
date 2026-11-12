@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: Scoop常用命令
-category: 常用命令
-tags: Scoop
+categories: [常用命令]
+tags: [Scoop]
 ---
-{% include JB/setup %}
 
 
   | 命令                   | 描述                                         |

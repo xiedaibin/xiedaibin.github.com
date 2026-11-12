@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   深入理解 Span<T> 和 Memory<T>：高效内存操作的利器
-category: 技术
-tags: C#
+layout: post
+title: 深入理解 Span<T> 和 Memory<T>：高效内存操作的利器
+categories: [技术]
+tags: ["C#"]
 ---
-{% include JB/setup %}
 
 在现代C#开发中，内存操作的效率至关重要。为了优化内存操作并提高性能，C# 提供了 `Span<T>` 和 `Memory<T>` 这两个强大的工具。本文将深入探讨它们的基本概念、适用场景、使用示例，并通过基准测试对比展示它们的性能优势。
 

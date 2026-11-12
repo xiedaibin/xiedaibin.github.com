@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  Mysql EXPLAIN 详细介绍
-category: 技术
-tags: mysql
+layout: post
+title: Mysql EXPLAIN 详细介绍
+categories: [技术]
+tags: [MySQL]
 ---
-{% include JB/setup %}
 
 在MySQL中，使用`EXPLAIN`语句可以分析查询语句的执行计划，以便了解MySQL是如何执行查询的。`EXPLAIN`语句返回一系列关于查询执行计划的信息，其中包括以下常见的字段：
 

@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: 与 chatgpt 探讨 mysql 死锁
-category: 技术
-tags: ChatGPT问答 mysql
+categories: [技术]
+tags: [ChatGPT问答, MySQL]
 ---
-{% include JB/setup %}
 
 ### 背景
 数据库死锁时数据非常棘手的问题，我们来看看，chatgpt 能给我们有什么启发。

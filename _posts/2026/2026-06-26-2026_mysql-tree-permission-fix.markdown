@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "巧用 RightCode 前缀匹配，一条 SQL 解决树形权限补全问题"
-category: 技术
-tags: RightCode, SQL, MySQL, sql, rightinfo, RightId, BIGINT, RightName
+categories: [技术]
+tags: [RightCode, SQL, MySQL, rightinfo, RightId, BIGINT, RightName]
 ---
 
 

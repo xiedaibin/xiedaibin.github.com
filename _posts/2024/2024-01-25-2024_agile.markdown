@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: 敏捷开发中 需求 迭代 任务的关系
-category: 敏捷开发
-tags: agile
+categories: [敏捷开发]
+tags: [agile]
 ---
-{% include JB/setup %}
 
 ### "Agile" 是一种指导软件开发的方法论，其核心理念是通过迭代、协作和灵活响应变化来提高项目的透明度和客户满意度。
 

@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "A2A 协议详解：让 AI 智能体学会\"互相说话\""
-category: 技术
-tags: AI, A2A, MCP, Agent, Protocol
+categories: [技术]
+tags: [AI, A2A, MCP, Agent, Protocol]
 ---
 
 > **摘要**：A2A（Agent2Agent）协议是一个开放标准，专门解决不同 AI 智能体之间的通信与协作问题。本文将从问题出发，带你完整理解 A2A 是什么、解决什么痛点、如何工作，以及它与 MCP 协议的关系。

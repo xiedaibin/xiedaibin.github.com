@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: C# 中 Stopwatch 精度测试与 Thread.Sleep 的陷阱
-category: 技术
-tags: dotnet
+categories: [技术]
+tags: [dotnet]
 ---
 
 在日常开发中，我们经常使用 `Stopwatch` 来测量代码执行的耗时。然而，在实际测试中，我们可能会遇到一些奇怪的现象，比如我最近遇到的一次实验，结果如下：

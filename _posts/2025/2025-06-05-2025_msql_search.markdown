@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 使用 MySQL 存储过程实现字符串字段的动态搜索
-category: 技术
-tags: mysql
+categories: [技术]
+tags: [MySQL]
 ---
 
 

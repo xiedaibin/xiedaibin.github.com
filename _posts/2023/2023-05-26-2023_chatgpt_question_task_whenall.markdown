@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: C# 中Task.WhenAll(storesTask,storeHouseTask) 同时我想获得到返回结果
-category: 技术
-tags: ChatGPT问答 C#
+categories: [技术]
+tags: [ChatGPT问答, "C#"]
 ---
-{% include JB/setup %}
 
 在C#中，您可以使用`await Task.WhenAll(storesTask, storeHouseTask)`来等待并同时执行多个任务。要获取它们的返回结果，可以使用`Task.WhenAll`方法返回的`Task`对象的`Result`属性。但请注意，`Result`属性只能在任务已完成并返回结果时使用，否则它将阻塞当前线程。
 

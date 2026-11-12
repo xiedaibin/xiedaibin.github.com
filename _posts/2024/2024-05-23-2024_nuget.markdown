@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   Docker 构建 .NET Core 项目时还原 NuGet 非常慢的处理方法
-category: 技术
-tags: C#
+layout: post
+title: Docker 构建 .NET Core 项目时还原 NuGet 非常慢的处理方法
+categories: [技术]
+tags: ["C#"]
 ---
-{% include JB/setup %}
 ###
 
 在使用 Docker 构建 .NET Core 项目时，有时候会遇到还原 NuGet 包非常慢的问题。下面是解决这一问题的方法，通过修改 NuGet.Config 文件来使用缓存镜像地址，可以显著提高 NuGet 包的还原速度。

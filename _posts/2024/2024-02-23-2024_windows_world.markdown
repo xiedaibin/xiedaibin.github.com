@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: Microsoft Word 右侧 导航窗格
-category: windows
-tags: world
+categories: [windows]
+tags: [world]
 ---
-{% include JB/setup %}
 
 在 Microsoft Word 中，您可以设置一个右侧的导航窗格，其中包含文档的索引，以便更轻松地查看并导航文档内容。您可以按照以下步骤来设置：
 

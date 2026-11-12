@@ -1,8 +1,8 @@
 ---
-layout: page
-title:  C# 中 `{ get; init; }` 与 `{ get; set; }` 的区别
-category: 技术
-tags: C#
+layout: post
+title: C# 中 `{ get; init; }` 与 `{ get; set; }` 的区别
+categories: [技术]
+tags: ["C#"]
 ---
 
 

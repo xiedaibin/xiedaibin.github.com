@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 在 Ocelot 网关中实现可重复读取的请求 Body
-category: 技术
-tags: net
+categories: [技术]
+tags: [NET]
 ---
 
 在使用 **Ocelot** 作为 API 网关时，我们经常需要在网关层读取请求体（`Body`）做一些事情，比如：

@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: Kubeadm证书过期处理
-category: 运维
-tags: K8s
+categories: [运维]
+tags: [K8s]
 ---
-{% include JB/setup %}
 
 
 **1\. 查看证书信息**

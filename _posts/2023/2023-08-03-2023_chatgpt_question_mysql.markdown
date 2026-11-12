@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: 和ChatGPT battle mysql语句优化
-category: 技术
-tags: ChatGPT问答 mysql
+categories: [技术]
+tags: [ChatGPT问答, MySQL]
 ---
-{% include JB/setup %}
 
 ### 背景
 在检查慢sql时发现了一个慢sql，查找代码，是同事在使用linq查询sql时 select 对象使用了FirstOrDefault，导致linq转化为sql时，为每一个FirstOrDefault都生成了一个子查询导致查询变慢。于是就产生了这篇与ChatGPT battle mysql语句优化得文字。通过这篇battle，你可以借鉴到与chatgpt对话，让chatgpt为你生成想要的结果的宝贵经验

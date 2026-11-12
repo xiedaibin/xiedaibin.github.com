@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "Linux 下灵活代理管理：开关、状态显示与自动检测"
-category: 技术
-tags: Linux, Proxy, Shell, 运维
+categories: [技术]
+tags: [Linux, Proxy, Shell, 运维]
 ---
 
 在 Linux 开发和运维环境中，使用 HTTP/HTTPS 代理十分常见，例如加速访问或穿透网络。然而，当代理服务关闭后，如果系统或程序仍然读取环境变量，就可能导致无法联网。本文总结了一套 **可控代理管理方案** ，支持手动开关、状态查询以及自动检测代理状态，帮助你轻松管理开发环境的网络访问。

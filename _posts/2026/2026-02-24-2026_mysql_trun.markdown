@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 使用 Shell 脚本 + Crontab 定时清理 MySQL 表数据
-category: 技术
-tags: mysql
+categories: [技术]
+tags: [MySQL]
 ---
 在日常运维或系统运行过程中，某些日志类或临时数据表会快速增长。
 例如性能分析类表：

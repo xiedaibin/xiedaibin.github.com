@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   如何清理和优化 Scoop 以释放磁盘空间
-category: 工具
-tags: windows
+layout: post
+title: 如何清理和优化 Scoop 以释放磁盘空间
+categories: [工具]
+tags: [Windows]
 ---
-{% include JB/setup %} 
 
 Scoop 是一个轻量级的 Windows 包管理器，简化了软件的安装和管理过程。然而，随着时间的推移，Scoop 可能会占用越来越多的磁盘空间，尤其是在系统盘上。如果你的 Scoop 安装目录占用了大量空间，那么通过一些简单的清理和优化步骤，可以有效地释放磁盘空间。本文将介绍如何清理和优化 Scoop，帮助你保持系统的高效运行。
 

@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 什么是 Wei？
-category: 技术
-tags: web3
+categories: [技术]
+tags: [web3]
 ---
 
 

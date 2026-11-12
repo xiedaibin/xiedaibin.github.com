@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: MySQL 性能优化：为什么带条件的 COUNT 查询比全表 COUNT 更慢？
-category: 技术
-tags: mysql
+categories: [技术]
+tags: [MySQL]
 ---
 
 在日常的 MySQL 使用过程中，我们有时会发现一种看似反常的现象：
