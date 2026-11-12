@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: 公司项目从Abp5.0.1升级到Abp7.4.2
-category: 技术
-tags: abp
+categories: [技术]
+tags: [ABP]
 ---
-{% include JB/setup %}
 
 ### 背景
 Abp5.0.1使用的基础框架是.net 6, 现在.net 8正式版已经发布。 abp .net 8版本也即将发布，避免直接从.net 6跨度到.net 8 项目中变更的因数过多难以升级。再加上以前在其他项目中顺利升级到abp 7版本。故在时间允许的情况下，将Abp5.0.1升级到abp7.4.2版本(该版本使用的是.net 7),待abp .net 8版本稳定可靠后再评估是否升级到.net 8版本。

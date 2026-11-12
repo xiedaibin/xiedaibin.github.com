@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Nginx WebSocket 配置完整指南
-category: 技术
-tags: nginx websocket
+categories: [技术]
+tags: [Nginx, WebSocket]
 ---
 
 WebSocket 长连接在生产环境中经常遇到意外断开的问题，主要原因是 Nginx 的默认超时配置。本文总结了 Nginx 配置 WebSocket 的关键要点和最佳实践。

@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  .net core下得健康检查服务
-category: 技术
-tags: netcore
+layout: post
+title: .net core下得健康检查服务
+categories: [技术]
+tags: [netcore]
 ---
-{% include JB/setup %}
 
 健康检查服务是确保系统运行正常的重要组成部分。它主要由两部分构成：**healthchecks-ui** 和服务添加健康检查端口（**/health**）。前者用于收集和展示服务的健康状况，后者则用于反馈单个服务的健康状态。
 

@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   在 WinForms 中避免后台线程与前台线程相互等待导致卡顿的方法
-category: 技术
-tags: WinForm
+layout: post
+title: 在 WinForms 中避免后台线程与前台线程相互等待导致卡顿的方法
+categories: [技术]
+tags: [WinForm]
 ---
-{% include JB/setup %}
 
 在WinForms应用程序中，后台线程与前台线程相互等待可能导致UI卡顿。以下是几种避免这种情况的方法：
 

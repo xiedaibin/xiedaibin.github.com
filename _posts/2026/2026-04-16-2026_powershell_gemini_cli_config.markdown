@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "用 PowerShell 配置文件优雅地调用 Gemini CLI"
-category: 技术
-tags: post, PowerShell, Gemini, +0800, CLI, xiedaibin, Microsoft, profile
+categories: [技术]
+tags: [post, PowerShell, Gemini, CLI, xiedaibin, Microsoft, profile]
 ---
 
 

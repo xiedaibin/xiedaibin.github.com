@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "Gemini CLI: 创建并发布自定义技能 (Skill) 的完整闭环指南"
-category: 技术
-tags: Gemini CLI, Skill, 自动化, 教程
+categories: [技术]
+tags: [Gemini CLI, Skill, 自动化, 教程]
 ---
 
 > 想要扩展 Gemini CLI 的能力？自己动手写一个 Skill 是最佳方式。本文将带你从零开始，走完从设计到发布的完整闭环。

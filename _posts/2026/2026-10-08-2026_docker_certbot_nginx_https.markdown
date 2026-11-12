@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "Docker 部署 Certbot + Nginx 自动申请与续期 HTTPS"
-category: 技术
-tags: Docker, Certbot, Nginx, HTTPS, webroot, Encrypt, reload, 443
+categories: [技术]
+tags: [Docker, Certbot, Nginx, HTTPS, webroot, Encrypt, reload, 443]
 ---
 
 

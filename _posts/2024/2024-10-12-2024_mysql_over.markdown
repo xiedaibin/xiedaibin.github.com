@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 如何在 MySQL 中删除分组数据中多余的记录
-category: 技术
-tags: mysql
+categories: [技术]
+tags: [MySQL]
 ---
 
 在日常数据库操作中，我们经常会遇到表中某些数据重复的情况。在本次案例中，我们有一个名为 `warehouse_StorageFeeConfigRelations` 的表，该表包含 `warehouseId` 和 `StorageFeeConfigId` 两列。由于某些原因，每个 `warehouseId` 和 `StorageFeeConfigId` 的组合可能会出现多条记录，我们需要删除这些多余的记录，只保留每组中的一条。

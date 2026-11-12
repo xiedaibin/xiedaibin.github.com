@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: C#中bin目录中生成的pdb文件是干什么的
-category: 技术
-tags: ChatGPT问答 mysql
+categories: [技术]
+tags: [ChatGPT问答, MySQL]
 ---
-{% include JB/setup %}
 
 ### 背景
 每次运行vs时会提示下载符号，下载符号就是下载pdb文件,我们来看看pdb文件到底是干什么的。

@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 服务器交接前 Docker login / logout 的安全总结
-category: 工具
-tags: ABP
+categories: [工具]
+tags: [ABP]
 ---
 
 

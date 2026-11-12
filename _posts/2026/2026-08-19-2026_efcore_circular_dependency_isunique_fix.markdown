@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "EF Core \"循环依赖\" 报错真相:一次错误的 IsUnique 标注引发的排查"
-category: 技术
-tags: Core, IsUnique, Unable, save, changes, because, circular, dependency
+categories: [技术]
+tags: [Core, IsUnique, Unable, save, changes, because, circular, dependency]
 ---
 
 

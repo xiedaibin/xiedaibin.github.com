@@ -32,10 +32,10 @@ description: 专门用于 Jekyll 博客文章的格式化、整理及一键发�
 
 ### 2.2 标头 (Front Matter) 规则
 生成以下 YAML 标头：
-- `layout`: `page`
+- `layout`: `post`
 - **`title`**: 提取自文章的第一行一级标题 (`# 标题`)。**必须始终包裹在双引号中**。
-- `category`: 默认为 `技术`。
-- `tags`: 从内容关键词中提取。
+- `categories`: 默认为 `[技术]`。
+- `tags`: 标准 YAML 数组格式（如 `[Docker, Nginx]`），从内容关键词中提取。
 
 ## 3. 内容处理
 - **删除标题行**：移除作为 `title` 提取的一级标题及其后的空行。

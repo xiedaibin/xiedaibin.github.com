@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: ASP.NET Core 实现带签名的安全导出下载（支持复杂 JSON 参数）
-category: 技术
-tags: net
+categories: [技术]
+tags: [NET]
 ---
 
 在日常后台系统中，“导出数据”几乎是标配功能之一。

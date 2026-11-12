@@ -1,8 +1,8 @@
 ---
-layout: page
-title:  动态编程利器：ExpandoObject
-category: 技术
-tags: dotnet
+layout: post
+title: 动态编程利器：ExpandoObject
+categories: [技术]
+tags: [dotnet]
 ---
 
 ### 

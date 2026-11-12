@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 理解二分查找的时间复杂度
-category: 技术
-tags: algo
+categories: [技术]
+tags: [algo]
 ---
 
 ### 

@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: 活动之内,活动之外(2020秋季拓展活动)
-category: 总结
-tags: 技术
+categories: [总结]
+tags: [技术]
 ---
-{% include JB/setup %}
 　　2020秋季拓展活动总结。
  
 ## 危难来临之时,任何船员都可以跳船求生，而船长不能

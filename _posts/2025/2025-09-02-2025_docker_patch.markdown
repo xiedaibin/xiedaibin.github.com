@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Docker构建Vue项目时补丁包导致的样式问题解决方案
-category: 技术
-tags: docker
+categories: [技术]
+tags: [Docker]
 ---
 
 ## 问题描述

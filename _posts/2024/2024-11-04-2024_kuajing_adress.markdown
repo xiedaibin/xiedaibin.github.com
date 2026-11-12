@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 中文地址与英文地址的区别
-category: 跨境
-tags: 其他
+categories: [跨境]
+tags: [其他]
 ---
 
 在跨境电商中，正确处理中文地址和英文地址的格式差异对于确保物流顺畅至关重要。以下是两者的主要区别总结：

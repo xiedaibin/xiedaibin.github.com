@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 在不修改数据库的前提下使用 ABP Domain 架构的实践方案
-category: 技术
-tags: abp
+categories: [技术]
+tags: [ABP]
 ---
 
 

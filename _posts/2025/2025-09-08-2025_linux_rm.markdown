@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Linux 下使用 `rm` 命令安全删除并保留指定文件/文件夹
-category: 技术
-tags: docker
+categories: [技术]
+tags: [Docker]
 ---
 
 在日常运维或开发过程中，我们经常会遇到这样的需求：

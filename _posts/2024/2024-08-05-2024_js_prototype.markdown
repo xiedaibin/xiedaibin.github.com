@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   深入理解JavaScript中的原型模式
-category: 技术
-tags: js
+layout: post
+title: 深入理解JavaScript中的原型模式
+categories: [技术]
+tags: [js]
 ---
-{% include JB/setup %}
 
 在JavaScript中，原型模式是一个核心概念，也是理解JavaScript面向对象编程的基础。本文将详细解释原型模式，包括其概念、机制、优点、缺点，并通过具体的代码示例帮助大家更好地理解。
 

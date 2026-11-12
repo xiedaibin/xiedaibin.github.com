@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "VMess + WS + TLS + Cloudflare 延迟 -1？一次\"分层排查\"的复盘"
-category: 技术
-tags: VMess, TLS, Cloudflare, v2rayN, VPS, Reality, WebSocket, UUID
+categories: [技术]
+tags: [VMess, TLS, Cloudflare, v2rayN, VPS, Reality, WebSocket, UUID]
 ---
 
 

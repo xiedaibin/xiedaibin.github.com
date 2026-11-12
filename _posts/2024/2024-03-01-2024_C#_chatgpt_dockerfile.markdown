@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  Dockerfile优化
-category: 技术
-tags: ChatGPT问答
+layout: post
+title: Dockerfile优化
+categories: [技术]
+tags: [ChatGPT问答]
 ---
-{% include JB/setup %}
 
 ``` shell
     #See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.

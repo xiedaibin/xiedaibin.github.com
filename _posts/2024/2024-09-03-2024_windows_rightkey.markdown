@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   如何将 Visual Studio Code (VSCode) 设置到文件右键快捷方式
-category: 工具
-tags: windows
+layout: post
+title: 如何将 Visual Studio Code (VSCode) 设置到文件右键快捷方式
+categories: [工具]
+tags: [Windows]
 ---
-{% include JB/setup %} 
 
 Visual Studio Code（VSCode）是一款广受欢迎的代码编辑器。为了方便地使用 VSCode 打开文件或文件夹，我们可以将其添加到 Windows 的右键快捷方式中。本文将详细介绍如何通过几种方法将 VSCode 添加到文件的右键菜单中，并为其设置图标。
 

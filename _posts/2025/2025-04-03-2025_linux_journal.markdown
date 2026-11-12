@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 如何清理 Linux 系统中的 /var/log/journal 日志文件
-category: 技术
-tags: linux
+categories: [技术]
+tags: [Linux]
 ---
 
 

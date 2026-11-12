@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 解决 rsync 需要手动输入密码的问题
-category: 技术
-tags: ssh
+categories: [技术]
+tags: [ssh]
 ---
 
 在使用 `rsync` 进行远程文件同步时，如果每次都需要手动输入密码，可能会影响自动化任务的执行。本文介绍如何通过 **SSH 密钥认证** 实现无密码登录，以及如何应对 `rsync` 过程中遇到的常见错误。

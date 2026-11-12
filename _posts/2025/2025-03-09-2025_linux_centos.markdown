@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 解决 CentOS 7 yum 更新失败：使用第三方镜像源
-category: 技术
-tags: linux
+categories: [技术]
+tags: [Linux]
 ---
 
 # 如何解决 CentOS 7 yum 更新失败：使用第三方镜像源

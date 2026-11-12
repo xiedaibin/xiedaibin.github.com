@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  深入理解子网和子网掩码
-category: network
-tags: network
+layout: post
+title: 深入理解子网和子网掩码
+categories: [network]
+tags: [network]
 ---
-{% include JB/setup %}
 
 在计算机网络中，子网、子网掩码、广播地址和默认网关是构建网络通信的关键概念。理解它们的作用和相互关系对于设计和管理网络至关重要。
 

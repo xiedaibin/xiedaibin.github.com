@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 深入理解 C# 底层机制：值类型、字符串驻留、虚调用、委托、锁、异步与 GC
-category: 技术
-tags: net
+categories: [技术]
+tags: [NET]
 ---
 
 ## 🧩 一、值类型可以放在堆、栈或寄存器上吗？

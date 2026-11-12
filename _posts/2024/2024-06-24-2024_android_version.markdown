@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   设计和维护Android应用的通用版和OEM版本
-category: 技术
-tags: VMware
+layout: post
+title: 设计和维护Android应用的通用版和OEM版本
+categories: [技术]
+tags: [VMware]
 ---
-{% include JB/setup %}
 
 ## 如何设计和维护Android应用的通用版和OEM版本
 

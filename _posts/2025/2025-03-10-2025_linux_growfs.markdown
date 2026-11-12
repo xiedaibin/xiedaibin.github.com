@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: LVM（逻辑卷管理）重新分配磁盘空间
-category: 技术
-tags: linux
+categories: [技术]
+tags: [Linux]
 ---
 
 在 CentOS 系统中，如果 /home 分区占用较多空间，而根分区（/）空间不足，我们可以使用 LVM（逻辑卷管理）重新分配磁盘空间。本文介绍如何将 /home 的空间重新分配给根分区（/）。

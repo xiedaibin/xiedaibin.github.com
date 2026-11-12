@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 使用 Promise.all + fetch 在控制台快速验证并发请求
-category: 技术
-tags: 前端
+categories: [技术]
+tags: [前端]
 ---
 
 在前端调试或接口联调阶段，我们经常会遇到这样的问题：

@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  Tomcat安装
-category: 技术
-tags: java
+layout: post
+title: Tomcat安装
+categories: [技术]
+tags: [java]
 ---
-{% include JB/setup %}
 
 要在CentOS上安装Apache Tomcat 8.5.99，你可以按照以下步骤进行操作：
 

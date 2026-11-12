@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  表达式详解
-category: 技术
-tags: C#
+layout: post
+title: 表达式详解
+categories: [技术]
+tags: ["C#"]
 ---
-{% include JB/setup %}
 
 当我们谈论 C# 中的 `Expression<TDelegate>` 类型时，通常指的是表达式树 (Expression Tree)。表达式树是一种将代码表示为数据结构的技术，在运行时可以对其进行分析、转换和执行。`Expression<TDelegate>` 类型允许我们以编程方式构建代码的结构，并将其表示为可操作的对象。
 

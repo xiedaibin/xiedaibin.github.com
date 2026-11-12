@@ -1,8 +1,8 @@
 ---
-layout: page
-title:   使用 Docker 部署 Nginx 及外网访问问题排查
-category: 工具
-tags: docker
+layout: post
+title: 使用 Docker 部署 Nginx 及外网访问问题排查
+categories: [工具]
+tags: [Docker]
 ---
 
 在使用 Docker 部署 Nginx 时，特别是在绑定多个端口并挂载配置文件的场景下，外网访问可能会遇到一些问题。本文将分享如何通过 Docker 部署 Nginx 并解决外网访问端口失败的情况。

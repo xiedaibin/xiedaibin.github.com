@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  表达式与委托的区别
-category: 技术
-tags: C#
+layout: post
+title: 表达式与委托的区别
+categories: [技术]
+tags: ["C#"]
 ---
-{% include JB/setup %}
 
 `Expression<Func<TObject, TValue>>` 和 `Func<TObject, TValue>` 都是委托类型，但在用法和功能上有一些重要的区别。
 

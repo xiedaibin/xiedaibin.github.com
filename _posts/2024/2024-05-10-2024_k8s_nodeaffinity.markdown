@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  优化 Kubernetes Pod 调度：使用 Pod 亲和性和反亲和性
-category: 技术
-tags: k8s
+layout: post
+title: 优化 Kubernetes Pod 调度：使用 Pod 亲和性和反亲和性
+categories: [技术]
+tags: [K8s]
 ---
-{% include JB/setup %}
 
 
 在 Kubernetes 集群中，Pod 的调度是一个重要的问题，特别是当你需要确保某些 Pod 不会同时调度到同一台节点上时。在本文中，我们将探讨如何使用 Pod 亲和性和反亲和性来优化 Kubernetes 中 Pod 的调度。

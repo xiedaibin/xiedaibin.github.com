@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "在中国使用 Antigravity 编辑器：无需 TUN 模式的代理配置指南"
-category: 技术
-tags: Antigravity, TUN, v2rayN, baidu, github, proxy, ###, Proxy
+categories: [技术]
+tags: [Antigravity, TUN, v2rayN, baidu, GitHub, Proxy]
 ---
 
 

@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   自动化下载 Docker 镜像并部署到服务器的批处理脚本
-category: 技术
-tags: VMware
+layout: post
+title: 自动化下载 Docker 镜像并部署到服务器的批处理脚本
+categories: [技术]
+tags: [VMware]
 ---
-{% include JB/setup %}
 
 ### 背景
 

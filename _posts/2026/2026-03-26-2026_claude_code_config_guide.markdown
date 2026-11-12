@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "Claude Code 接入国产大模型完整配置指南"
-category: 技术
-tags: Claude, Claude Code, AI, 国产模型, 智谱, GLM, 阿里, Qwen, DeepSeek
+categories: [技术]
+tags: [Claude, Claude Code, AI, 国产模型, 智谱, GLM, 阿里, Qwen, DeepSeek]
 ---
 
 > 适用于智谱 GLM / 阿里 Qwen / DeepSeek 等兼容 Anthropic 协议的服务商

@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: ME1与ME2的区别
-category: 跨境
-tags: 其他
+categories: [跨境]
+tags: [其他]
 ---
 
 在 Mercado Libre（美客多）平台中，**Mercado Envíos 1（ME1）** 和 **Mercado Envíos 2（ME2）** 是两种不同的物流选项，各自适用于不同类型的商品和物流需求。以下是它们的区别和使用场景：

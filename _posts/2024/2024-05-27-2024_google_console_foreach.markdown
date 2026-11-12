@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   如何在Google Chrome控制台中使用JavaScript批量执行Fetch请求
-category: 技术
-tags: 前端
+layout: post
+title: 如何在Google Chrome控制台中使用JavaScript批量执行Fetch请求
+categories: [技术]
+tags: [前端]
 ---
-{% include JB/setup %}
 ###
 
 在前端开发中，通常会遇到需要对多个数据项批量执行API请求的情况。最近，我在项目中需要对一组`planDetailId`进行批量处理，并向服务器发送一系列POST请求。在本文中，我将分享如何在Google Chrome控制台中使用JavaScript循环遍历这些ID，并发送相应的Fetch请求。

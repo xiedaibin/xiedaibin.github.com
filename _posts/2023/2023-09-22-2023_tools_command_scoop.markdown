@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: GitHub高级搜索过滤器
-category: 常用命令
-tags: Github
+categories: [常用命令]
+tags: [GitHub]
 ---
-{% include JB/setup %}
 
 
 | 过滤器       | 用法示例            | 描述                                     |

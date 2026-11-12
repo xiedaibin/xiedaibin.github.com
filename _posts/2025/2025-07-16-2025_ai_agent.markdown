@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: AI Agent 能带来什么变革？
-category: Thinking
-tags: AI
+categories: [Thinking]
+tags: [AI]
 ---
 
 AI Agents 正在软件开发领域带来一场深刻的变革，它们不仅仅是辅助工具，而是能够自主思考、规划并执行任务的智能系统。这场变革将极大地提升软件开发的效率和质量，同时也会对现有程序员的工作方式和职业发展带来深远的影响。

@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: AI Agent 时代的程序员能力提升路线图：重新定义与科学路径
-category: Thinking
-tags: AI
+categories: [Thinking]
+tags: [AI]
 ---
 
 ## 引言：从代码执行者到智能系统编织者

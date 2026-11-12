@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 在无法访问外网的服务器上部署代理服务
-category: 技术
-tags: Docker, V2Ray, OpenCloudOS, 代理
+categories: [技术]
+tags: [Docker, V2Ray, OpenCloudOS, 代理]
 ---
 
 > 基于 Docker Compose + V2Ray 的完整实践指南

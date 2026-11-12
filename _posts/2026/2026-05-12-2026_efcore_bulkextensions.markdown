@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "EF Core 结合 EFCore.BulkExtensions 实现高性能批量插入"
-category: 技术
-tags: Core, EFCore, BulkExtensions, Entity, Framework, SQL, Server, MySQL
+categories: [技术]
+tags: [Core, EFCore, BulkExtensions, Entity, Framework, SQL, Server, MySQL]
 ---
 
 

@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: "解决远程桌面 FPS 低、画面模糊：强制 GPU 硬件加速全攻略"
-category: 技术
-tags: FPS, GPU, ###, Windows, CPU, ####, ToDesk, NVIDIA
+categories: [技术]
+tags: [FPS, GPU, Windows, CPU, ToDesk, NVIDIA]
 ---
 
 

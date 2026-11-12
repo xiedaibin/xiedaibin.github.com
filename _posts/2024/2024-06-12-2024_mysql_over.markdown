@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   如何通过MySQL窗口函数高效更新同一张表连续两条数据和验证
-category: 技术
-tags: mysql
+layout: post
+title: 如何通过MySQL窗口函数高效更新同一张表连续两条数据和验证
+categories: [技术]
+tags: [MySQL]
 ---
-{% include JB/setup %}
 
 在数据库开发和维护过程中，数据的一致性和准确性至关重要。本文将展示如何使用MySQL窗口函数高效地更新和验证同一张表中连续两条数据。我们的具体需求是：对于每个 `ProductId`，如果有两条记录，那么第二条记录的 `BeginNumber` 需要比第一条记录的 `EndNumber` 大1。
 

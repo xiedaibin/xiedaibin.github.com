@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   理解与应用 SVG 中的circle元素与渐变填充
-category: 前端
-tags: svg
+layout: post
+title: 理解与应用 SVG 中的circle元素与渐变填充
+categories: [前端]
+tags: [svg]
 ---
-{% include JB/setup %} 
 
 
 SVG（Scalable Vector Graphics）是一种基于 XML 的矢量图形格式，广泛用于绘制形状、图标和复杂的图形。与位图（如 PNG 和 JPEG）不同，SVG 是基于数学方程的，因此在任何尺寸下都不会失真。在前端开发中，使用 SVG 来绘制图形不仅能确保高质量的显示，还能实现丰富的交互效果。今天我们将重点讨论如何使用 SVG 的 `<circle>` 元素及其渐变填充效果。

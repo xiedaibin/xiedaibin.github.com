@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Docker 中优化 MySQL 8 性能的最佳实践
-category: 技术
-tags: mysql
+categories: [技术]
+tags: [MySQL]
 ---
 
 

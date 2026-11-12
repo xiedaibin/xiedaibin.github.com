@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  ABP自动设置实体初始化字段属性值的实现方式
-category: 技术
-tags: ABP
+layout: post
+title: ABP自动设置实体初始化字段属性值的实现方式
+categories: [技术]
+tags: [ABP]
 ---
-{% include JB/setup %}
 
 ### 自动设置实体初始化字段属性值的实现方式
 

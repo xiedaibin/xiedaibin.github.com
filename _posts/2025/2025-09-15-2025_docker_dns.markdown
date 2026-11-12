@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Docker Compose 多副本与负载均衡解析
-category: 技术
-tags: docker
+categories: [技术]
+tags: [Docker]
 ---
 
 在日常使用 Docker Compose 时，很多人会遇到这样的问题：

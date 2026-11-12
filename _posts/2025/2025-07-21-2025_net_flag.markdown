@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: C# 中使用位运算管理枚举标志位（Flags）
-category: 技术
-tags: NET
+categories: [技术]
+tags: [NET]
 ---
 
 在开发中，我们经常会遇到“多状态组合”的场景，比如一个箱子是否需要温控、是否为危险品、是否超大、是否易碎等。使用普通布尔变量会很难维护，而使用带有 `[Flags]` 特性的枚举配合位运算，则是一个优雅的解决方案。

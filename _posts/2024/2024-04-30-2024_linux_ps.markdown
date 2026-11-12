@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  ps查看进程命令
-category: 技术
-tags: Linux
+layout: post
+title: ps查看进程命令
+categories: [技术]
+tags: [Linux]
 ---
-{% include JB/setup %}
 
 ### `ps -ef` 和 `ps -a` 得区别
 

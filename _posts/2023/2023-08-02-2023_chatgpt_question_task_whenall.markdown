@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: ls -l 返回详解
-category: 技术
-tags: ChatGPT问答 linux
+categories: [技术]
+tags: [ChatGPT问答, Linux]
 ---
-{% include JB/setup %}
 
 当在Linux或Unix系统中使用`ls -l`命令时，它将列出当前目录中的文件和目录，并显示它们的详细信息，包括权限、所有者、所属组、文件大小、修改日期和文件名等。下面是`ls -l`命令返回的各个字段的详细解释：
 

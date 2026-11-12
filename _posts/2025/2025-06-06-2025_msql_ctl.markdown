@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: MySQL 多表连接 + 聚合查询的性能优化实践
-category: 技术
-tags: mysql
+categories: [技术]
+tags: [MySQL]
 ---
 
 在实际业务开发中，复杂的统计类 SQL 查询常常因为频繁的表连接和聚合操作而导致性能问题。本文通过一个真实场景的 SQL 查询，演示如何通过公共表表达式（CTE）、逻辑拆分与结构优化，有效提升查询性能。

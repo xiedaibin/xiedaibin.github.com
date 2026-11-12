@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 深入理解 YAML 扩展字段与锚点在 Docker Compose 中的应用
-category: 技术
-tags: yaml
+categories: [技术]
+tags: [yaml]
 ---
 
 

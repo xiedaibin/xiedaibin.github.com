@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: aud和scope的区别：OAuth 2.0 和 OpenID Connect 中的重要概念
-category: 技术
-tags: git
+categories: [技术]
+tags: [Git]
 ---
 
 在 OAuth 2.0 和 OpenID Connect 中，**`aud`**（Audience）和 **`scope`**（权限范围）是两个至关重要的概念。它们虽然都涉及到授权和访问控制，但在使用场景和功能上有着显著的不同。了解这两个概念的区别，有助于在构建安全的身份验证和授权系统时做出更合适的设计和选择。

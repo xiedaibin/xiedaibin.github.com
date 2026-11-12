@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 连接新主机时避免手动确认密钥的方法
-category: 技术
-tags: ssh
+categories: [技术]
+tags: [ssh]
 ---
 
 

@@ -1,10 +1,9 @@
 ---
-layout: page
-title:   解决 HTTPS 页面访问 HTTP API 时的混合内容问题
-category: 技术
-tags: web
+layout: post
+title: 解决 HTTPS 页面访问 HTTP API 时的混合内容问题
+categories: [技术]
+tags: [web]
 ---
-{% include JB/setup %} 
 
 在开发 HTTPS 网站时，我们常常遇到这样的问题：前端页面需要请求 HTTP API，但由于浏览器的安全策略，导致这些请求被阻止。这种情况被称为**混合内容问题**。浏览器会默认阻止从 HTTPS 页面发起的 HTTP 请求，确保数据传输的安全性。本文将重点介绍如何在开发环境中临时解决该问题，并讨论如何配置 Chrome 允许 HTTPS 页面访问 HTTP API。
 

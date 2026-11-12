@@ -1,10 +1,9 @@
 ---
-layout: page
-title:  mysql删除多余重复数据
-category: 技术
-tags: mysql
+layout: post
+title: mysql删除多余重复数据
+categories: [技术]
+tags: [MySQL]
 ---
-{% include JB/setup %}
 
 要实现你描述的需求，你可以使用以下步骤：
 

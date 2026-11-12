@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: Python 中 `from ... import ...` 和 `import ...` 的区别详解
-category: 技术
-tags: python
+categories: [技术]
+tags: [Python]
 ---
 
 在 Python 中，我们常常会使用模块来组织代码，而导入模块时，有两种主要的方式：`from ... import ...` 和 `import ...`。然而，它们的使用场景和背后的原理却不尽相同。本文将对此进行详细分析，帮助你理解为何有些模块需要用 `from`，而有些则直接使用 `import`。

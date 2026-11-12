@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: 使用 `partial class` 拆分大型 Service 的最佳实践
-category: 技术
-tags: 软件设计
+categories: [技术]
+tags: [软件设计]
 ---
 
 

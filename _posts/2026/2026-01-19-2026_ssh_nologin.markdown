@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: SSH 免密登录
-category: 技术
-tags: ssh
+categories: [技术]
+tags: [ssh]
 ---
 
 在日常 Linux 服务器管理中，我们经常需要通过 SSH 登录远程服务器。如果每次都要输入密码，不仅麻烦，还影响自动化脚本的执行效率。本文介绍了 **三步实现 SSH 免密登录**，亲测可用且非常直观实用。

@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: Nacos鉴权配置指南
-category: 技术
-tags: nacos
+categories: [技术]
+tags: [nacos]
 ---
-{% include JB/setup %}
 
 Nacos是一款强大的服务发现和配置管理工具，通过灵活的配置选项，可以满足复杂的微服务架构需求。在Nacos的最新版本2.0.3中，引入了鉴权配置功能，使得用户能够更好地保护其服务和配置信息。本文将介绍如何在Nacos中进行鉴权配置，以及生成鉴权密钥的过程。
 

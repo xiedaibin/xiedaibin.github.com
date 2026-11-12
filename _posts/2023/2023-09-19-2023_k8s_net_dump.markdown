@@ -1,10 +1,9 @@
 ---
-layout: page
+layout: post
 title: Kubernetes中使用dotnet-dump工具获取日志
-category: 技术
-tags: C#
+categories: [技术]
+tags: ["C#"]
 ---
-{% include JB/setup %}
 
 ## 概述
   这是以前写在笔记本里的关于如何在k8s中得到.net core 程序的dump 日志，突然看到一个pod内存暂用过高，想拉下来一个dump看看，但忘记了命令。

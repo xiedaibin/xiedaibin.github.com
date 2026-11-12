@@ -1,8 +1,8 @@
 ---
-layout: page
+layout: post
 title: OpenClaw Dashboard 无法登录排查全记录
-category: 技术
-tags: OpenClaw, Dashboard, Gateway, 排查
+categories: [技术]
+tags: [OpenClaw, Dashboard, Gateway, 排查]
 ---
 
 > 本文记录了一次 OpenClaw Dashboard 显示 `unauthorized: too many failed authentication attempts` 的完整排查过程，核心方法论对排查各类 Gateway 认证问题有通用参考价值。
