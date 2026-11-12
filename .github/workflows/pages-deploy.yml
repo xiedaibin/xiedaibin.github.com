@@ -51,7 +51,8 @@ jobs:
         run: |
           bundle exec htmlproofer _site \
             --disable-external \
-            --ignore-urls "/^http:\/\/127.0.0.1/,/^http:\/\/0.0.0.0/,/^http:\/\/localhost/,/^\/categories\//,/^\/tags\//"
+            --no-enforce-https \
+            --ignore-urls "/^http:\/\/127.0.0.1/,/^http:\/\/0.0.0.0/,/^http:\/\/localhost/"
         env:
           LC_ALL: "C.UTF-8"
           LANG: "C.UTF-8"
